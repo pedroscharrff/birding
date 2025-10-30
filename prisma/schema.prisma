@@ -1,0 +1,526 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================
+// ENUMS
+// ============================================
+
+enum Moeda {
+  BRL
+  USD
+  EUR
+}
+
+enum StatusOS {
+  planejamento
+  cotacoes
+  reservas_pendentes
+  reservas_confirmadas
+  documentacao
+  pronto_para_viagem
+  em_andamento
+  concluida
+  pos_viagem
+  cancelada
+}
+
+enum TipoTransporte {
+  van
+  quatro_x_quatro @map("4x4")
+  executivo_cidade
+  executivo_fora_cidade
+  aereo_cliente
+  aereo_guia
+}
+
+enum TipoLancamento {
+  entrada
+  saida
+  adiantamento
+  ajuste
+}
+
+enum CategoriaLancamento {
+  hospedagem
+  guiamento
+  transporte
+  alimentacao
+  atividade
+  taxa
+  passagem_aerea
+  despesa_guia
+  despesa_motorista
+  outros
+}
+
+enum RoleGlobal {
+  admin
+  agente
+  guia
+  motorista
+  fornecedor
+  cliente
+}
+
+enum TipoFornecedor {
+  hotelaria
+  guiamento
+  transporte
+  alimentacao
+  atividade
+  outros
+}
+
+enum CategoriaOSFornecedor {
+  hotelaria
+  guiamento
+  transporte
+  alimentacao
+  atividade
+}
+
+enum RegimeHospedagem {
+  sem_cafe
+  cafe
+  meia_pensao
+  pensao_completa
+}
+
+enum CategoriaPassagemAerea {
+  cliente
+  guia
+}
+
+enum TipoEventoCalendario {
+  chegada
+  saida
+  atividade
+  transporte
+  checkpoint
+}
+
+enum RecursoCalendario {
+  guia
+  motorista
+  veiculo
+  fornecedor
+  outros
+}
+
+// ============================================
+// TABELAS
+// ============================================
+
+model Organizacao {
+  id        String   @id @default(uuid())
+  nome      String
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  usuarios              Usuario[]
+  fornecedores          Fornecedor[]
+  os                    OS[]
+  lancamentosFinanceiros LancamentoFinanceiro[]
+  eventosCalendario     EventoCalendario[]
+
+  @@index([nome])
+  @@map("organizacoes")
+}
+
+model Usuario {
+  id          String      @id @default(uuid())
+  orgId       String      @map("org_id")
+  nome        String
+  email       String      @unique
+  telefone    String?
+  roleGlobal  RoleGlobal  @map("role_global")
+  hashSenha   String      @map("hash_senha")
+  ativo       Boolean     @default(true)
+  createdAt   DateTime    @default(now()) @map("created_at")
+  updatedAt   DateTime    @updatedAt @map("updated_at")
+
+  // Relations
+  organizacao            Organizacao            @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  osResponsavel          OS[]                   @relation("OSResponsavel")
+  guiaDesignacoes        GuiaDesignacao[]
+  motoristaDesignacoes   MotoristaDesignacao[]
+  scoutings              Scouting[]
+  lancamentosReferencia  LancamentoFinanceiro[] @relation("LancamentoReferenciaUsuario")
+  lancamentosCriados     LancamentoFinanceiro[] @relation("LancamentoCriadoPor")
+  anotacoes              Anotacao[]
+  historicoStatus        HistoricoStatus[]
+
+  @@index([orgId])
+  @@index([email])
+  @@index([roleGlobal])
+  @@map("usuarios")
+}
+
+model Fornecedor {
+  id            String          @id @default(uuid())
+  orgId         String          @map("org_id")
+  nomeFantasia  String          @map("nome_fantasia")
+  razaoSocial   String?         @map("razao_social")
+  tipo          TipoFornecedor
+  email         String?
+  telefone      String?
+  documento     String?
+  endereco      Json?
+  obs           String?
+  createdAt     DateTime        @default(now()) @map("created_at")
+  updatedAt     DateTime        @updatedAt @map("updated_at")
+
+  // Relations
+  organizacao            Organizacao            @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  osFornecedores         OSFornecedor[]
+  atividades             Atividade[]
+  hospedagens            Hospedagem[]
+  transportes            Transporte[]
+  lancamentosFinanceiros LancamentoFinanceiro[]
+
+  @@index([orgId])
+  @@index([tipo])
+  @@index([nomeFantasia])
+  @@map("fornecedores")
+}
+
+model OS {
+  id                    String     @id @default(uuid())
+  orgId                 String     @map("org_id")
+  titulo                String
+  destino               String
+  dataInicio            DateTime   @map("data_inicio") @db.Date
+  dataFim               DateTime   @map("data_fim") @db.Date
+  status                StatusOS   @default(planejamento)
+  agenteResponsavelId   String     @map("agente_responsavel_id")
+  descricao             String?
+  checklist             Json?
+  createdAt             DateTime   @default(now()) @map("created_at")
+  updatedAt             DateTime   @updatedAt @map("updated_at")
+
+  // Relations
+  organizacao            Organizacao            @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  agenteResponsavel      Usuario                @relation("OSResponsavel", fields: [agenteResponsavelId], references: [id])
+  participantes          Participante[]
+  fornecedores           OSFornecedor[]
+  atividades             Atividade[]
+  hospedagens            Hospedagem[]
+  transportes            Transporte[]
+  passagensAereas        PassagemAerea[]
+  guiasDesignacao        GuiaDesignacao[]
+  motoristasDesignacao   MotoristaDesignacao[]
+  scoutings              Scouting[]
+  lancamentosFinanceiros LancamentoFinanceiro[]
+  anotacoes              Anotacao[]
+  historicoStatus        HistoricoStatus[]
+  eventosCalendario      EventoCalendario[]
+
+  @@index([orgId])
+  @@index([status])
+  @@index([dataInicio])
+  @@index([dataFim])
+  @@index([destino])
+  @@index([agenteResponsavelId])
+  @@map("os")
+}
+
+model Participante {
+  id                  String    @id @default(uuid())
+  osId                String    @map("os_id")
+  nome                String
+  email               String
+  telefone            String?
+  passaporteNumero    String?   @map("passaporte_numero")
+  passaporteValidade  DateTime? @map("passaporte_validade") @db.Date
+  alergias            String?
+  restricoes          String?
+  preferencias        String?
+  idade               Int?
+  observacoes         String?
+  createdAt           DateTime  @default(now()) @map("created_at")
+  updatedAt           DateTime  @updatedAt @map("updated_at")
+
+  // Relations
+  os OS @relation(fields: [osId], references: [id], onDelete: Cascade)
+
+  @@index([osId])
+  @@index([email])
+  @@index([passaporteNumero])
+  @@map("os_participantes")
+}
+
+model OSFornecedor {
+  id              String                 @id @default(uuid())
+  osId            String                 @map("os_id")
+  fornecedorId    String                 @map("fornecedor_id")
+  categoria       CategoriaOSFornecedor
+  contatoNome     String?                @map("contato_nome")
+  contatoEmail    String?                @map("contato_email")
+  contatoTelefone String?                @map("contato_telefone")
+  contratoRef     String?                @map("contrato_ref")
+  createdAt       DateTime               @default(now()) @map("created_at")
+  updatedAt       DateTime               @updatedAt @map("updated_at")
+
+  // Relations
+  os         OS         @relation(fields: [osId], references: [id], onDelete: Cascade)
+  fornecedor Fornecedor @relation(fields: [fornecedorId], references: [id])
+
+  @@index([osId])
+  @@index([fornecedorId])
+  @@index([categoria])
+  @@map("os_fornecedores")
+}
+
+model Atividade {
+  id                String      @id @default(uuid())
+  osId              String      @map("os_id")
+  nome              String
+  valor             Decimal?    @db.Decimal(12, 2)
+  moeda             Moeda       @default(BRL)
+  localizacao       String?
+  quantidadeMaxima  Int?        @map("quantidade_maxima")
+  data              DateTime?   @db.Date
+  hora              DateTime?   @db.Time
+  fornecedorId      String?     @map("fornecedor_id")
+  notas             String?
+  createdAt         DateTime    @default(now()) @map("created_at")
+  updatedAt         DateTime    @updatedAt @map("updated_at")
+
+  // Relations
+  os         OS          @relation(fields: [osId], references: [id], onDelete: Cascade)
+  fornecedor Fornecedor? @relation(fields: [fornecedorId], references: [id])
+
+  @@index([osId])
+  @@index([data])
+  @@index([nome])
+  @@map("os_atividades")
+}
+
+model Hospedagem {
+  id            String             @id @default(uuid())
+  osId          String             @map("os_id")
+  fornecedorId  String             @map("fornecedor_id")
+  hotelNome     String             @map("hotel_nome")
+  checkin       DateTime
+  checkout      DateTime
+  quartos       Int?
+  regime        RegimeHospedagem?
+  custoTotal    Decimal?           @map("custo_total") @db.Decimal(12, 2)
+  moeda         Moeda              @default(BRL)
+  reservasRefs  Json?              @map("reservas_refs")
+  createdAt     DateTime           @default(now()) @map("created_at")
+  updatedAt     DateTime           @updatedAt @map("updated_at")
+
+  // Relations
+  os         OS         @relation(fields: [osId], references: [id], onDelete: Cascade)
+  fornecedor Fornecedor @relation(fields: [fornecedorId], references: [id])
+
+  @@index([osId])
+  @@index([fornecedorId])
+  @@index([checkin])
+  @@index([checkout])
+  @@map("os_hospedagens")
+}
+
+model Transporte {
+  id           String          @id @default(uuid())
+  osId         String          @map("os_id")
+  tipo         TipoTransporte
+  fornecedorId String?         @map("fornecedor_id")
+  origem       String?
+  destino      String?
+  dataPartida  DateTime?       @map("data_partida")
+  dataChegada  DateTime?       @map("data_chegada")
+  custo        Decimal?        @db.Decimal(12, 2)
+  moeda        Moeda           @default(BRL)
+  detalhes     Json?
+  createdAt    DateTime        @default(now()) @map("created_at")
+  updatedAt    DateTime        @updatedAt @map("updated_at")
+
+  // Relations
+  os         OS          @relation(fields: [osId], references: [id], onDelete: Cascade)
+  fornecedor Fornecedor? @relation(fields: [fornecedorId], references: [id])
+
+  @@index([osId])
+  @@index([tipo])
+  @@index([dataPartida])
+  @@index([dataChegada])
+  @@map("os_transportes")
+}
+
+model PassagemAerea {
+  id           String                  @id @default(uuid())
+  osId         String                  @map("os_id")
+  categoria    CategoriaPassagemAerea
+  passageiroNome String                @map("passageiro_nome")
+  cia          String?
+  pnr          String?
+  trecho       String?
+  dataPartida  DateTime?               @map("data_partida")
+  dataChegada  DateTime?               @map("data_chegada")
+  custo        Decimal?                @db.Decimal(12, 2)
+  moeda        Moeda                   @default(BRL)
+  createdAt    DateTime                @default(now()) @map("created_at")
+  updatedAt    DateTime                @updatedAt @map("updated_at")
+
+  // Relations
+  os OS @relation(fields: [osId], references: [id], onDelete: Cascade)
+
+  @@index([osId])
+  @@index([categoria])
+  @@index([dataPartida])
+  @@map("os_passagens_aereas")
+}
+
+model GuiaDesignacao {
+  id        String   @id @default(uuid())
+  osId      String   @map("os_id")
+  guiaId    String   @map("guia_id")
+  funcao    String?
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  os   OS      @relation(fields: [osId], references: [id], onDelete: Cascade)
+  guia Usuario @relation(fields: [guiaId], references: [id])
+
+  @@unique([osId, guiaId])
+  @@map("os_guias_designacao")
+}
+
+model MotoristaDesignacao {
+  id           String          @id @default(uuid())
+  osId         String          @map("os_id")
+  motoristaId  String          @map("motorista_id")
+  veiculoTipo  TipoTransporte? @map("veiculo_tipo")
+  createdAt    DateTime        @default(now()) @map("created_at")
+  updatedAt    DateTime        @updatedAt @map("updated_at")
+
+  // Relations
+  os        OS      @relation(fields: [osId], references: [id], onDelete: Cascade)
+  motorista Usuario @relation(fields: [motoristaId], references: [id])
+
+  @@unique([osId, motoristaId])
+  @@map("os_motoristas_designacao")
+}
+
+model Scouting {
+  id           String   @id @default(uuid())
+  osId         String   @map("os_id")
+  autorId      String   @map("autor_id")
+  titulo       String
+  descricao    String?
+  roteiroJson  Json?    @map("roteiro_json")
+  anexos       Json?
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  os    OS      @relation(fields: [osId], references: [id], onDelete: Cascade)
+  autor Usuario @relation(fields: [autorId], references: [id])
+
+  @@index([osId])
+  @@index([autorId])
+  @@index([createdAt])
+  @@map("os_scoutings")
+}
+
+model LancamentoFinanceiro {
+  id                   String               @id @default(uuid())
+  orgId                String               @map("org_id")
+  osId                 String?              @map("os_id")
+  referenciaUsuarioId  String?              @map("referencia_usuario_id")
+  fornecedorId         String?              @map("fornecedor_id")
+  tipo                 TipoLancamento
+  categoria            CategoriaLancamento
+  valor                Decimal              @db.Decimal(12, 2)
+  moeda                Moeda                @default(BRL)
+  data                 DateTime             @db.Date
+  observacao           String?
+  comprovanteUrl       String?              @map("comprovante_url")
+  createdBy            String               @map("created_by")
+  createdAt            DateTime             @default(now()) @map("created_at")
+  updatedAt            DateTime             @updatedAt @map("updated_at")
+
+  // Relations
+  organizacao       Organizacao @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  os                OS?         @relation(fields: [osId], references: [id])
+  referenciaUsuario Usuario?    @relation("LancamentoReferenciaUsuario", fields: [referenciaUsuarioId], references: [id])
+  fornecedor        Fornecedor? @relation(fields: [fornecedorId], references: [id])
+  criador           Usuario     @relation("LancamentoCriadoPor", fields: [createdBy], references: [id])
+
+  @@index([orgId])
+  @@index([osId])
+  @@index([categoria])
+  @@index([data])
+  @@map("financeiro_lancamentos")
+}
+
+model Anotacao {
+  id        String   @id @default(uuid())
+  osId      String   @map("os_id")
+  autorId   String   @map("autor_id")
+  texto     String
+  createdAt DateTime @default(now()) @map("created_at")
+
+  // Relations
+  os    OS      @relation(fields: [osId], references: [id], onDelete: Cascade)
+  autor Usuario @relation(fields: [autorId], references: [id])
+
+  @@index([osId])
+  @@index([autorId])
+  @@index([createdAt])
+  @@map("os_anotacoes")
+}
+
+model HistoricoStatus {
+  id          String    @id @default(uuid())
+  osId        String    @map("os_id")
+  de          StatusOS?
+  para        StatusOS
+  alteradoPor String    @map("alterado_por")
+  motivo      String?
+  createdAt   DateTime  @default(now()) @map("created_at")
+
+  // Relations
+  os      OS      @relation(fields: [osId], references: [id], onDelete: Cascade)
+  usuario Usuario @relation(fields: [alteradoPor], references: [id])
+
+  @@index([osId])
+  @@index([createdAt])
+  @@map("os_historico_status")
+}
+
+model EventoCalendario {
+  id            String                @id @default(uuid())
+  orgId         String                @map("org_id")
+  osId          String                @map("os_id")
+  titulo        String
+  tipo          TipoEventoCalendario
+  inicio        DateTime
+  fim           DateTime?
+  recurso       RecursoCalendario?
+  recursoRefId  String?               @map("recurso_ref_id")
+  createdAt     DateTime              @default(now()) @map("created_at")
+  updatedAt     DateTime              @updatedAt @map("updated_at")
+
+  // Relations
+  organizacao Organizacao @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  os          OS          @relation(fields: [osId], references: [id], onDelete: Cascade)
+
+  @@index([orgId])
+  @@index([osId])
+  @@index([inicio])
+  @@index([tipo])
+  @@map("calendario_eventos")
+}
