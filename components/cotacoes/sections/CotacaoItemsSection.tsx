@@ -12,6 +12,8 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Plus, Trash2 } from "lucide-react"
+import { FornecedorSelect } from "@/components/forms/FornecedorSelect"
+import { TarifaSelect } from "@/components/forms/TarifaSelect"
 
 export interface CotacaoItem {
   id: string
@@ -31,6 +33,7 @@ interface CotacaoItemsSectionProps {
   sectionTitle: string
   quantityLabel?: string
   quantityPlaceholder?: string
+  tipoFornecedor: 'hotelaria' | 'guiamento' | 'transporte' | 'alimentacao' | 'atividade' | 'outros'
 }
 
 export function CotacaoItemsSection({
@@ -39,8 +42,11 @@ export function CotacaoItemsSection({
   sectionTitle,
   quantityLabel = "Quantidade",
   quantityPlaceholder = "Ex: 1",
+  tipoFornecedor,
 }: CotacaoItemsSectionProps) {
   const [editingItem, setEditingItem] = useState<Partial<CotacaoItem>>({
+    fornecedorId: "",
+    tarifaId: "",
     descricao: "",
     quantidade: 1,
     valorUnitario: 0,
@@ -55,6 +61,8 @@ export function CotacaoItemsSection({
 
     const newItem: CotacaoItem = {
       id: Math.random().toString(36).substr(2, 9),
+      fornecedorId: editingItem.fornecedorId,
+      tarifaId: editingItem.tarifaId,
       descricao: editingItem.descricao,
       quantidade: editingItem.quantidade,
       valorUnitario: editingItem.valorUnitario,
@@ -66,6 +74,8 @@ export function CotacaoItemsSection({
     onChange([...items, newItem])
     
     setEditingItem({
+      fornecedorId: "",
+      tarifaId: "",
       descricao: "",
       quantidade: 1,
       valorUnitario: 0,
@@ -146,10 +156,58 @@ export function CotacaoItemsSection({
         </div>
       )}
 
-      <div className="border rounded-lg p-4 bg-gray-50 space-y-4">
+      <div className="border rounded-lg p-3 bg-gray-50 space-y-3">
         <p className="text-sm font-medium text-gray-700">Adicionar novo item</p>
         
-        <div className="grid grid-cols-12 gap-3">
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <FornecedorSelect
+              tipo={tipoFornecedor}
+              value={editingItem.fornecedorId || ""}
+              onChange={(fornecedorId) => {
+                handleFieldChange("fornecedorId", fornecedorId)
+                if (!fornecedorId) {
+                  handleFieldChange("tarifaId", "")
+                }
+              }}
+              label="Fornecedor (Opcional)"
+              placeholder="Selecione um fornecedor..."
+            />
+          </div>
+
+          {editingItem.fornecedorId && (
+            <div>
+              <TarifaSelect
+                fornecedorId={editingItem.fornecedorId}
+                value={editingItem.tarifaId || ""}
+                onChange={(tarifaId, tarifa) => {
+                  console.log('[CotacaoItemsSection] Tarifa selecionada:', { tarifaId, tarifa })
+                  handleFieldChange("tarifaId", tarifaId)
+                  if (tarifa) {
+                    const valorNumerico = typeof tarifa.valor === 'string' ? parseFloat(tarifa.valor) : tarifa.valor
+                    console.log('[CotacaoItemsSection] Preenchendo campos:', {
+                      descricao: tarifa.descricao,
+                      valor: valorNumerico,
+                      moeda: tarifa.moeda
+                    })
+                    
+                    setEditingItem(prev => ({
+                      ...prev,
+                      tarifaId,
+                      descricao: tarifa.descricao,
+                      valorUnitario: valorNumerico,
+                      moeda: tarifa.moeda,
+                      subtotal: (prev.quantidade || 1) * valorNumerico
+                    }))
+                  }
+                }}
+                label="Tarifa (Opcional)"
+              />
+            </div>
+          )}
+        </div>
+        
+        <div className="grid grid-cols-12 gap-2">
           <div className="col-span-5">
             <Label htmlFor="descricao" className="text-xs">Descrição *</Label>
             <Input
@@ -157,6 +215,7 @@ export function CotacaoItemsSection({
               placeholder="Ex: Hotel Fazenda - Quarto Duplo"
               value={editingItem.descricao || ""}
               onChange={(e) => handleFieldChange("descricao", e.target.value)}
+              className="h-9"
             />
           </div>
 
@@ -169,6 +228,7 @@ export function CotacaoItemsSection({
               placeholder={quantityPlaceholder}
               value={editingItem.quantidade || ""}
               onChange={(e) => handleFieldChange("quantidade", e.target.value)}
+              className="h-9"
             />
           </div>
 
@@ -182,39 +242,35 @@ export function CotacaoItemsSection({
               placeholder="0,00"
               value={editingItem.valorUnitario || ""}
               onChange={(e) => handleFieldChange("valorUnitario", e.target.value)}
+              className="h-9"
             />
           </div>
 
-          <div className="col-span-2">
-            <Label htmlFor="subtotal" className="text-xs">Subtotal</Label>
+          <div className="col-span-3">
+            <Label htmlFor="observacoes" className="text-xs">Obs.</Label>
             <Input
-              id="subtotal"
-              value={formatCurrency(editingItem.subtotal || 0)}
-              disabled
-              className="bg-gray-100"
+              id="observacoes"
+              placeholder="Observações..."
+              value={editingItem.observacoes || ""}
+              onChange={(e) => handleFieldChange("observacoes", e.target.value)}
+              className="h-9"
             />
-          </div>
-
-          <div className="col-span-1 flex items-end">
-            <Button
-              type="button"
-              onClick={handleAddItem}
-              disabled={!editingItem.descricao || !editingItem.quantidade || !editingItem.valorUnitario}
-              className="w-full"
-            >
-              <Plus className="h-4 w-4" />
-            </Button>
           </div>
         </div>
 
-        <div className="col-span-12">
-          <Label htmlFor="observacoes" className="text-xs">Observações</Label>
-          <Input
-            id="observacoes"
-            placeholder="Observações sobre este item..."
-            value={editingItem.observacoes || ""}
-            onChange={(e) => handleFieldChange("observacoes", e.target.value)}
-          />
+        <div className="flex items-center justify-between pt-2 border-t border-gray-200">
+          <div className="text-sm">
+            <span className="text-gray-600">Subtotal: </span>
+            <span className="font-semibold text-gray-900">{formatCurrency(editingItem.subtotal || 0)}</span>
+          </div>
+          <Button
+            type="button"
+            onClick={handleAddItem}
+            disabled={!editingItem.descricao || !editingItem.quantidade || !editingItem.valorUnitario}
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            Adicionar Item
+          </Button>
         </div>
       </div>
 

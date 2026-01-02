@@ -22,6 +22,7 @@ import { Badge } from "@/components/ui/badge"
 import { FileText, Plus, Search, Filter, Settings } from "lucide-react"
 import { CreateCotacaoDialog } from "@/components/cotacoes/CreateCotacaoDialog"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 
 const statusColors = {
   rascunho: "bg-gray-100 text-gray-800",
@@ -40,6 +41,7 @@ const statusLabels = {
 }
 
 export default function CotacoesPage() {
+  const router = useRouter()
   const [statusFilter, setStatusFilter] = useState<string>("todos")
   const [destinoFilter, setDestinoFilter] = useState<string>("")
   const [refreshKey, setRefreshKey] = useState(0)
@@ -195,7 +197,11 @@ export default function CotacoesPage() {
               </TableRow>
             ) : (
               mockCotacoes.map((cotacao) => (
-                <TableRow key={cotacao.id} className="hover:bg-gray-50 cursor-pointer">
+                <TableRow 
+                  key={cotacao.id} 
+                  className="hover:bg-gray-50 cursor-pointer"
+                  onClick={() => router.push(`/dashboard/cotacoes/${cotacao.id}`)}
+                >
                   <TableCell className="font-medium">{cotacao.titulo}</TableCell>
                   <TableCell>{cotacao.clienteNome}</TableCell>
                   <TableCell>{cotacao.destino}</TableCell>
@@ -212,7 +218,14 @@ export default function CotacoesPage() {
                   </TableCell>
                   <TableCell>{cotacao.responsavel}</TableCell>
                   <TableCell className="text-right">
-                    <Button variant="ghost" size="sm">
+                    <Button 
+                      variant="ghost" 
+                      size="sm"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        router.push(`/dashboard/cotacoes/${cotacao.id}`)
+                      }}
+                    >
                       Ver
                     </Button>
                   </TableCell>

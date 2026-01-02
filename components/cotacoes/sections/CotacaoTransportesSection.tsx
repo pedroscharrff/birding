@@ -15,6 +15,7 @@ export function CotacaoTransportesSection({ items, onChange }: CotacaoTransporte
       sectionTitle="Transportes"
       quantityLabel="Quantidade"
       quantityPlaceholder="Ex: 1"
+      tipoFornecedor="transporte"
     />
   )
 }

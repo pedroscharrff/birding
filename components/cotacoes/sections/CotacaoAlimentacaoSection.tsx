@@ -15,6 +15,7 @@ export function CotacaoAlimentacaoSection({ items, onChange }: CotacaoAlimentaca
       sectionTitle="Alimentação"
       quantityLabel="Refeições"
       quantityPlaceholder="Ex: 6"
+      tipoFornecedor="alimentacao"
     />
   )
 }

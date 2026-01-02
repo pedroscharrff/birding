@@ -63,23 +63,29 @@ export function TarifaSelect({
   const fetchTarifas = async () => {
     setLoading(true)
     try {
+      console.log('[TarifaSelect] Buscando tarifas para fornecedor:', fornecedorId)
       const res = await fetch(`/api/fornecedores/${fornecedorId}/tarifas?ativas=true`, {
         credentials: 'include',
       })
 
       const data = await res.json()
+      console.log('[TarifaSelect] Resposta da API:', data)
 
       if (!res.ok || !data.success) {
+        console.error('[TarifaSelect] Erro na resposta:', data.error)
         throw new Error(data.error || 'Erro ao buscar tarifas')
       }
 
-      setTarifas(data.data)
+      console.log('[TarifaSelect] Tarifas encontradas:', data.data?.length || 0)
+      setTarifas(data.data || [])
     } catch (error: any) {
+      console.error('[TarifaSelect] Erro ao buscar tarifas:', error)
       toast({
         title: 'Erro',
         description: error.message || 'Erro ao buscar tarifas',
         variant: 'destructive',
       })
+      setTarifas([])
     } finally {
       setLoading(false)
     }
@@ -172,9 +178,16 @@ export function TarifaSelect({
       )}
 
       {!loading && tarifas.length === 0 && fornecedorId && (
-        <p className="text-sm text-amber-600">
-          Este fornecedor não possui tarifas cadastradas. O valor deverá ser informado manualmente.
-        </p>
+        <div className="mt-2 p-3 bg-amber-50 border border-amber-200 rounded-md">
+          <p className="text-sm text-amber-800 font-medium">
+            ⚠️ Nenhuma tarifa ativa encontrada
+          </p>
+          <p className="text-xs text-amber-700 mt-1">
+            Este fornecedor não possui tarifas ativas cadastradas ou vigentes. 
+            Verifique se as tarifas estão marcadas como "ativas" e dentro do período de vigência.
+            O valor deverá ser informado manualmente.
+          </p>
+        </div>
       )}
     </div>
   )

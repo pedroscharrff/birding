@@ -15,6 +15,7 @@ export function CotacaoHospedagensSection({ items, onChange }: CotacaoHospedagen
       sectionTitle="Hospedagens"
       quantityLabel="Noites"
       quantityPlaceholder="Ex: 3"
+      tipoFornecedor="hotelaria"
     />
   )
 }
