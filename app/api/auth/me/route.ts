@@ -5,6 +5,7 @@ import { prisma } from '@/lib/db/prisma'
 export async function GET() {
   try {
     const session = await getSession()
+    console.log('[AUTH][ME][GET] session', session ? { userId: session.userId, orgId: session.orgId } : null)
     
     if (!session) {
       return NextResponse.json(
@@ -16,7 +17,6 @@ export async function GET() {
     // Buscar dados completos do usuário
     const usuario = await prisma.usuario.findUnique({
       where: { id: session.userId },
-      include: { organizacao: true },
       select: {
         id: true,
         nome: true,
@@ -32,6 +32,7 @@ export async function GET() {
         },
       },
     })
+    console.log('[AUTH][ME][GET] usuario found?', Boolean(usuario))
     
     if (!usuario) {
       return NextResponse.json(

@@ -1,10 +1,74 @@
-import { Button } from '@/components/ui/button'
+"use client"
+
+import { useState, useEffect } from 'react'
+import Link from 'next/link'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
+import { Skeleton } from '@/components/ui/skeleton'
+import { ErrorMessage } from '@/components/ui/error-message'
+import { CreateOSDialog } from '@/components/forms/CreateOSDialog'
+import { usePaginatedApi } from '@/hooks/useApi'
+import { OSStatusSelect } from '@/components/os/OSStatusSelect'
+import { OSIndicators, OSCompletenessBar } from '@/components/os/OSIndicators'
+import type { OS } from '@prisma/client'
+import { format } from 'date-fns'
+import { ptBR } from 'date-fns/locale'
+import { Breadcrumbs } from '@/components/navigation/Breadcrumbs'
+
+interface OSWithCounts extends OS {
+  _count: {
+    participantes: number
+    atividades: number
+    hospedagens: number
+  }
+  agenteResponsavel: {
+    id: string
+    nome: string
+    email: string
+  }
+}
 
 export default function OSPage() {
+  const [filters, setFilters] = useState({
+    titulo: '',
+    destino: '',
+    dataInicio: '',
+    dataFim: '',
+  })
+
+  const { data: response, loading, error, refetch } = usePaginatedApi<OSWithCounts>('/api/os', filters)
+
+  // Estado local otimista para lista de OS
+  const [localOsList, setLocalOsList] = useState<OSWithCounts[]>([])
+
+  // Sincroniza quando os dados chegarem
+  useEffect(() => {
+    if (response?.data) {
+      setLocalOsList(response.data)
+    }
+  }, [response?.data])
+
+  const handleFilterChange = (field: string, value: string) => {
+    setFilters(prev => ({ ...prev, [field]: value }))
+  }
+
+  const handleStatusChange = (osId: string, newStatus: string) => {
+    // Atualização otimista na lista
+    setLocalOsList((prev) =>
+      prev.map((os) =>
+        os.id === osId ? { ...os, status: newStatus as any } : os
+      )
+    )
+  }
+
   return (
     <div className="space-y-8">
+      <Breadcrumbs
+        items={[
+          { label: 'Dashboard', href: '/dashboard' },
+          { label: 'Operações' },
+        ]}
+      />
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Ordens de Serviço</h1>
@@ -12,7 +76,7 @@ export default function OSPage() {
             Gerencie todas as operações de turismo
           </p>
         </div>
-        <Button>+ Nova OS</Button>
+        <CreateOSDialog onSuccess={refetch} />
       </div>
 
       {/* Filtros */}
@@ -25,136 +89,146 @@ export default function OSPage() {
         </CardHeader>
         <CardContent>
           <div className="grid md:grid-cols-4 gap-4">
-            <Input placeholder="Buscar por título..." />
-            <Input placeholder="Destino..." />
-            <Input type="date" placeholder="Data início" />
-            <Input type="date" placeholder="Data fim" />
+            <Input
+              placeholder="Buscar por título..."
+              value={filters.titulo}
+              onChange={(e) => handleFilterChange('titulo', e.target.value)}
+            />
+            <Input
+              placeholder="Destino..."
+              value={filters.destino}
+              onChange={(e) => handleFilterChange('destino', e.target.value)}
+            />
+            <Input
+              type="date"
+              placeholder="Data início"
+              value={filters.dataInicio}
+              onChange={(e) => handleFilterChange('dataInicio', e.target.value)}
+            />
+            <Input
+              type="date"
+              placeholder="Data fim"
+              value={filters.dataFim}
+              onChange={(e) => handleFilterChange('dataFim', e.target.value)}
+            />
           </div>
         </CardContent>
       </Card>
 
       {/* Lista de OS */}
-      <div className="space-y-4">
-        <Card className="hover:shadow-md transition cursor-pointer">
-          <CardHeader>
-            <div className="flex items-start justify-between">
-              <div>
-                <CardTitle className="text-xl">Tour Pantanal Sul</CardTitle>
-                <CardDescription>Corumbá, MS - 15 a 20 Janeiro 2025</CardDescription>
-              </div>
-              <span className="px-3 py-1 bg-blue-100 text-blue-700 text-xs font-semibold rounded-full">
-                Planejamento
-              </span>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-6 text-sm text-gray-600">
-              <div>
-                <span className="font-semibold">8</span> Participantes
-              </div>
-              <div>
-                <span className="font-semibold">3</span> Atividades
-              </div>
-              <div>
-                <span className="font-semibold">2</span> Hospedagens
-              </div>
-              <div className="ml-auto">
-                Responsável: <span className="font-semibold">João Silva</span>
-              </div>
+      {loading ? (
+        <OSListSkeleton />
+      ) : error ? (
+        <ErrorMessage
+          title="Erro ao carregar operações"
+          message={error}
+          onRetry={refetch}
+        />
+      ) : !response || !response.data || response.data.length === 0 ? (
+        <Card>
+          <CardContent className="py-12">
+            <p className="text-center text-gray-500">
+              Nenhuma operação encontrada
+            </p>
+            <div className="flex justify-center mt-4">
+              <CreateOSDialog onSuccess={refetch} />
             </div>
           </CardContent>
         </Card>
+      ) : (
+        <div className="space-y-4">
+          {localOsList.map((os) => (
+            <Card key={os.id} className="hover:shadow-md transition">
+              <CardHeader>
+                <div className="flex items-start justify-between gap-4">
+                  <Link href={`/dashboard/os/${os.id}`} className="flex-1 cursor-pointer min-w-0">
+                    <CardTitle className="text-xl hover:text-blue-600 transition">{os.titulo}</CardTitle>
+                    <CardDescription>
+                      {os.destino} - {format(new Date(os.dataInicio), 'dd MMM', { locale: ptBR })} a {format(new Date(os.dataFim), 'dd MMM yyyy', { locale: ptBR })}
+                    </CardDescription>
+                  </Link>
+                  <div onClick={(e) => e.stopPropagation()} className="flex-shrink-0">
+                    <OSStatusSelect
+                      osId={os.id}
+                      osTitulo={os.titulo}
+                      currentStatus={os.status}
+                      onStatusChange={(newStatus) => handleStatusChange(os.id, newStatus)}
+                      variant="badge"
+                      size="sm"
+                    />
+                  </div>
+                </div>
 
-        <Card className="hover:shadow-md transition cursor-pointer">
-          <CardHeader>
-            <div className="flex items-start justify-between">
-              <div>
-                <CardTitle className="text-xl">Bonito Express</CardTitle>
-                <CardDescription>Bonito, MS - 22 a 25 Janeiro 2025</CardDescription>
-              </div>
-              <span className="px-3 py-1 bg-green-100 text-green-700 text-xs font-semibold rounded-full">
-                Confirmada
-              </span>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-6 text-sm text-gray-600">
-              <div>
-                <span className="font-semibold">12</span> Participantes
-              </div>
-              <div>
-                <span className="font-semibold">5</span> Atividades
-              </div>
-              <div>
-                <span className="font-semibold">1</span> Hospedagem
-              </div>
-              <div className="ml-auto">
-                Responsável: <span className="font-semibold">Maria Santos</span>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+                {/* Indicadores Visuais */}
+                <div className="mt-3">
+                  <OSIndicators
+                    os={os}
+                    compact={true}
+                    showLabels={false}
+                  />
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {/* Stats */}
+                <div className="flex items-center gap-6 text-sm text-gray-600">
+                  <div>
+                    <span className="font-semibold">{os._count.participantes}</span> Participantes
+                  </div>
+                  <div>
+                    <span className="font-semibold">{os._count.atividades}</span> Atividades
+                  </div>
+                  <div>
+                    <span className="font-semibold">{os._count.hospedagens}</span> Hospedagens
+                  </div>
+                  <div className="ml-auto">
+                    Responsável: <span className="font-semibold">{os.agenteResponsavel.nome}</span>
+                  </div>
+                </div>
 
-        <Card className="hover:shadow-md transition cursor-pointer">
-          <CardHeader>
-            <div className="flex items-start justify-between">
-              <div>
-                <CardTitle className="text-xl">Chapada dos Guimarães</CardTitle>
-                <CardDescription>Chapada dos Guimarães, MT - 28 Jan a 02 Fev 2025</CardDescription>
-              </div>
-              <span className="px-3 py-1 bg-yellow-100 text-yellow-700 text-xs font-semibold rounded-full">
-                Cotações
-              </span>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-6 text-sm text-gray-600">
-              <div>
-                <span className="font-semibold">6</span> Participantes
-              </div>
-              <div>
-                <span className="font-semibold">4</span> Atividades
-              </div>
-              <div>
-                <span className="font-semibold">2</span> Hospedagens
-              </div>
-              <div className="ml-auto">
-                Responsável: <span className="font-semibold">Pedro Costa</span>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+                {/* Barra de Completude */}
+                <OSCompletenessBar os={os} />
+              </CardContent>
+            </Card>
+          ))}
 
-        <Card className="hover:shadow-md transition cursor-pointer border-purple-200 bg-purple-50">
+          {/* Paginação */}
+          {response.pagination && response.pagination.totalPages > 1 && (
+            <div className="flex justify-center items-center gap-2 py-4">
+              <p className="text-sm text-gray-600">
+                Página {response.pagination.page} de {response.pagination.totalPages} ({response.pagination.total} resultados)
+              </p>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function OSListSkeleton() {
+  return (
+    <div className="space-y-4">
+      {[1, 2, 3].map(i => (
+        <Card key={i}>
           <CardHeader>
             <div className="flex items-start justify-between">
-              <div>
-                <CardTitle className="text-xl">Beto Carrero World</CardTitle>
-                <CardDescription>Penha, SC - 14 a 18 Janeiro 2025</CardDescription>
+              <div className="flex-1">
+                <Skeleton className="h-6 w-64 mb-2" />
+                <Skeleton className="h-4 w-96" />
               </div>
-              <span className="px-3 py-1 bg-purple-100 text-purple-700 text-xs font-semibold rounded-full">
-                Em Andamento
-              </span>
+              <Skeleton className="h-6 w-24" />
             </div>
           </CardHeader>
           <CardContent>
-            <div className="flex items-center gap-6 text-sm text-gray-600">
-              <div>
-                <span className="font-semibold">15</span> Participantes
-              </div>
-              <div>
-                <span className="font-semibold">2</span> Atividades
-              </div>
-              <div>
-                <span className="font-semibold">1</span> Hospedagem
-              </div>
-              <div className="ml-auto">
-                Responsável: <span className="font-semibold">Ana Paula</span>
-              </div>
+            <div className="flex items-center gap-6">
+              <Skeleton className="h-4 w-32" />
+              <Skeleton className="h-4 w-32" />
+              <Skeleton className="h-4 w-32" />
+              <Skeleton className="h-4 w-48 ml-auto" />
             </div>
           </CardContent>
         </Card>
-      </div>
+      ))}
     </div>
   )
 }

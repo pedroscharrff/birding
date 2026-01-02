@@ -2,8 +2,10 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db/prisma'
 import { requireAuth } from '@/lib/auth/session'
 import { updateOSSchema } from '@/lib/validators/os'
+import { invalidateOSStatsCache, refreshMaterializedViews } from '@/lib/services/dashboard-stats'
 
 // GET /api/os/[id] - Obter OS por ID
+// Otimizado com selects específicos para reduzir payload
 export async function GET(
   request: NextRequest,
   { params }: { params: { id: string } }
@@ -11,13 +13,26 @@ export async function GET(
   try {
     const session = await requireAuth()
     const { id } = params
-    
+
+    // Query otimizada com selects específicos ao invés de include completo
     const os = await prisma.oS.findFirst({
       where: {
         id,
         orgId: session.orgId,
       },
-      include: {
+      select: {
+        id: true,
+        orgId: true,
+        titulo: true,
+        destino: true,
+        dataInicio: true,
+        dataFim: true,
+        status: true,
+        agenteResponsavelId: true,
+        descricao: true,
+        checklist: true,
+        createdAt: true,
+        updatedAt: true,
         agenteResponsavel: {
           select: {
             id: true,
@@ -25,62 +40,180 @@ export async function GET(
             email: true,
           },
         },
-        participantes: true,
+        participantes: {
+          select: {
+            id: true,
+            nome: true,
+            email: true,
+            telefone: true,
+            passaporteNumero: true,
+            passaporteValidade: true,
+            alergias: true,
+            restricoes: true,
+            preferencias: true,
+            idade: true,
+            observacoes: true,
+            createdAt: true,
+          },
+          orderBy: {
+            nome: 'asc',
+          },
+        },
         fornecedores: {
-          include: {
-            fornecedor: true,
+          select: {
+            id: true,
+            fornecedorId: true,
+            categoria: true,
+            contatoNome: true,
+            contatoEmail: true,
+            contatoTelefone: true,
+            contratoRef: true,
+            fornecedor: {
+              select: {
+                id: true,
+                nomeFantasia: true,
+                tipo: true,
+                email: true,
+                telefone: true,
+              },
+            },
           },
         },
         atividades: {
-          include: {
-            fornecedor: true,
+          select: {
+            id: true,
+            nome: true,
+            valor: true,
+            moeda: true,
+            localizacao: true,
+            quantidadeMaxima: true,
+            data: true,
+            hora: true,
+            fornecedorId: true,
+            notas: true,
+            fornecedor: {
+              select: {
+                id: true,
+                nomeFantasia: true,
+                tipo: true,
+              },
+            },
           },
+          orderBy: [
+            { data: 'asc' },
+            { hora: 'asc' },
+          ],
         },
         hospedagens: {
-          include: {
-            fornecedor: true,
+          select: {
+            id: true,
+            fornecedorId: true,
+            tarifaId: true,
+            hotelNome: true,
+            checkin: true,
+            checkout: true,
+            quartos: true,
+            tipoQuarto: true,
+            regime: true,
+            custoTotal: true,
+            moeda: true,
+            observacoes: true,
+            reservasRefs: true,
+            fornecedor: {
+              select: {
+                id: true,
+                nomeFantasia: true,
+                tipo: true,
+                email: true,
+                telefone: true,
+              },
+            },
+          },
+          orderBy: {
+            checkin: 'asc',
           },
         },
         transportes: {
-          include: {
-            fornecedor: true,
+          select: {
+            id: true,
+            tipo: true,
+            fornecedorId: true,
+            origem: true,
+            destino: true,
+            dataPartida: true,
+            dataChegada: true,
+            custo: true,
+            moeda: true,
+            detalhes: true,
+            fornecedor: {
+              select: {
+                id: true,
+                nomeFantasia: true,
+                tipo: true,
+              },
+            },
+          },
+          orderBy: {
+            dataPartida: 'asc',
           },
         },
-        passagensAereas: true,
+        passagensAereas: {
+          select: {
+            id: true,
+            categoria: true,
+            passageiroNome: true,
+            cia: true,
+            pnr: true,
+            trecho: true,
+            dataPartida: true,
+            dataChegada: true,
+            custo: true,
+            moeda: true,
+          },
+          orderBy: {
+            dataPartida: 'asc',
+          },
+        },
         guiasDesignacao: {
-          include: {
+          select: {
+            id: true,
+            guiaId: true,
+            funcao: true,
             guia: {
               select: {
                 id: true,
                 nome: true,
                 email: true,
+                telefone: true,
               },
             },
           },
         },
         motoristasDesignacao: {
-          include: {
+          select: {
+            id: true,
+            motoristaId: true,
+            veiculoTipo: true,
             motorista: {
               select: {
                 id: true,
                 nome: true,
                 email: true,
+                telefone: true,
               },
             },
           },
         },
         scoutings: {
-          include: {
-            autor: {
-              select: {
-                id: true,
-                nome: true,
-              },
-            },
-          },
-        },
-        anotacoes: {
-          include: {
+          select: {
+            id: true,
+            autorId: true,
+            titulo: true,
+            descricao: true,
+            roteiroJson: true,
+            anexos: true,
+            createdAt: true,
+            updatedAt: true,
             autor: {
               select: {
                 id: true,
@@ -92,8 +225,32 @@ export async function GET(
             createdAt: 'desc',
           },
         },
+        anotacoes: {
+          select: {
+            id: true,
+            autorId: true,
+            texto: true,
+            createdAt: true,
+            autor: {
+              select: {
+                id: true,
+                nome: true,
+              },
+            },
+          },
+          orderBy: {
+            createdAt: 'desc',
+          },
+          take: 50, // Limitar últimas 50 anotações
+        },
         historicoStatus: {
-          include: {
+          select: {
+            id: true,
+            de: true,
+            para: true,
+            alteradoPor: true,
+            motivo: true,
+            createdAt: true,
             usuario: {
               select: {
                 id: true,
@@ -104,6 +261,7 @@ export async function GET(
           orderBy: {
             createdAt: 'desc',
           },
+          take: 100, // Limitar últimos 100 status
         },
       },
     })
@@ -194,7 +352,10 @@ export async function PATCH(
         },
       })
     }
-    
+
+    // Invalidar cache de estatísticas
+    invalidateOSStatsCache(os.id)
+
     return NextResponse.json({
       success: true,
       data: os,
@@ -252,7 +413,10 @@ export async function DELETE(
     await prisma.oS.delete({
       where: { id },
     })
-    
+
+    // Invalidar cache de estatísticas
+    invalidateOSStatsCache(id)
+
     return NextResponse.json({
       success: true,
       message: 'OS deletada com sucesso',

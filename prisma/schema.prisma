@@ -8,6 +8,7 @@ generator client {
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 // ============================================
@@ -47,6 +48,8 @@ enum TipoLancamento {
   saida
   adiantamento
   ajuste
+  receita_os      // Receita de venda de OS/Tour
+  comissao        // Comissão de agente/guia
 }
 
 enum CategoriaLancamento {
@@ -59,7 +62,20 @@ enum CategoriaLancamento {
   passagem_aerea
   despesa_guia
   despesa_motorista
+  receita_tour    // Receita de venda de tour
+  comissao_agente // Comissão do agente
+  comissao_guia   // Comissão do guia
+  reembolso       // Reembolsos diversos
+  cancelamento    // Taxas de cancelamento
   outros
+}
+
+enum StatusPagamento {
+  pendente
+  parcial
+  pago
+  atrasado
+  cancelado
 }
 
 enum RoleGlobal {
@@ -93,6 +109,7 @@ enum RegimeHospedagem {
   cafe
   meia_pensao
   pensao_completa
+  all_inclusive
 }
 
 enum CategoriaPassagemAerea {
@@ -116,6 +133,31 @@ enum RecursoCalendario {
   outros
 }
 
+enum AcaoAuditoria {
+  criar
+  atualizar
+  excluir
+  visualizar
+  exportar
+  status_alterado
+}
+
+enum EntidadeAuditoria {
+  os
+  participante
+  fornecedor_os
+  atividade
+  hospedagem
+  transporte
+  passagem_aerea
+  guia_designacao
+  motorista_designacao
+  scouting
+  lancamento_financeiro
+  pagamento_os
+  anotacao
+}
+
 // ============================================
 // TABELAS
 // ============================================
@@ -131,7 +173,13 @@ model Organizacao {
   fornecedores          Fornecedor[]
   os                    OS[]
   lancamentosFinanceiros LancamentoFinanceiro[]
+  pagamentosOS          PagamentoOS[]
   eventosCalendario     EventoCalendario[]
+  presetCategories      PresetCategory[]
+  presetItems           PresetItem[]
+  presetTemplates       PresetTemplate[]
+  auditorias            AuditoriaOS[]
+  policies              OrganizacaoPolicy[]
 
   @@index([nome])
   @@map("organizacoes")
@@ -159,6 +207,7 @@ model Usuario {
   lancamentosCriados     LancamentoFinanceiro[] @relation("LancamentoCriadoPor")
   anotacoes              Anotacao[]
   historicoStatus        HistoricoStatus[]
+  auditorias             AuditoriaOS[]
 
   @@index([orgId])
   @@index([email])
@@ -187,11 +236,38 @@ model Fornecedor {
   hospedagens            Hospedagem[]
   transportes            Transporte[]
   lancamentosFinanceiros LancamentoFinanceiro[]
+  pagamentosOS           PagamentoOS[]
+  tarifas                FornecedorTarifa[]
 
   @@index([orgId])
   @@index([tipo])
   @@index([nomeFantasia])
   @@map("fornecedores")
+}
+
+model FornecedorTarifa {
+  id            String    @id @default(uuid())
+  fornecedorId  String    @map("fornecedor_id")
+  descricao     String
+  valor         Decimal   @db.Decimal(12, 2)
+  moeda         Moeda     @default(BRL)
+  unidade       String?   // Ex: "por pessoa", "por dia", "por grupo", "por km"
+  vigenciaInicio DateTime? @map("vigencia_inicio") @db.Date
+  vigenciaFim    DateTime? @map("vigencia_fim") @db.Date
+  ativo         Boolean   @default(true)
+  observacoes   String?
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  // Relations
+  fornecedor  Fornecedor   @relation(fields: [fornecedorId], references: [id], onDelete: Cascade)
+  hospedagens Hospedagem[]
+
+  @@index([fornecedorId])
+  @@index([ativo])
+  @@index([vigenciaInicio])
+  @@index([vigenciaFim])
+  @@map("fornecedor_tarifas")
 }
 
 model OS {
@@ -205,6 +281,16 @@ model OS {
   agenteResponsavelId   String     @map("agente_responsavel_id")
   descricao             String?
   checklist             Json?
+
+  // Campos Financeiros
+  valorVenda            Decimal?   @map("valor_venda") @db.Decimal(12, 2)
+  moedaVenda            Moeda      @default(BRL) @map("moeda_venda")
+  valorRecebido         Decimal?   @map("valor_recebido") @db.Decimal(12, 2) @default(0)
+  custoEstimado         Decimal?   @map("custo_estimado") @db.Decimal(12, 2)
+  custoReal             Decimal?   @map("custo_real") @db.Decimal(12, 2)
+  margemEstimada        Decimal?   @map("margem_estimada") @db.Decimal(5, 2) // Percentual
+  obsFinanceiras        String?    @map("obs_financeiras") @db.Text
+
   createdAt             DateTime   @default(now()) @map("created_at")
   updatedAt             DateTime   @updatedAt @map("updated_at")
 
@@ -221,9 +307,12 @@ model OS {
   motoristasDesignacao   MotoristaDesignacao[]
   scoutings              Scouting[]
   lancamentosFinanceiros LancamentoFinanceiro[]
+  pagamentos             PagamentoOS[]
   anotacoes              Anotacao[]
   historicoStatus        HistoricoStatus[]
   eventosCalendario      EventoCalendario[]
+  auditorias             AuditoriaOS[]
+  policySnapshots        OSPolicySnapshot[]
 
   @@index([orgId])
   @@index([status])
@@ -293,6 +382,13 @@ model Atividade {
   hora              DateTime?   @db.Time
   fornecedorId      String?     @map("fornecedor_id")
   notas             String?
+
+  // Controle de Pagamento
+  statusPagamento     StatusPagamento @default(pendente) @map("status_pagamento")
+  dataPagamento       DateTime?       @map("data_pagamento") @db.Date
+  formaPagamento      String?         @map("forma_pagamento")
+  referenciaPagamento String?         @map("referencia_pagamento")
+
   createdAt         DateTime    @default(now()) @map("created_at")
   updatedAt         DateTime    @updatedAt @map("updated_at")
 
@@ -303,6 +399,8 @@ model Atividade {
   @@index([osId])
   @@index([data])
   @@index([nome])
+  @@index([statusPagamento])
+  @@index([statusPagamento, data]) // Índice composto para alertas de despesas vencidas
   @@map("os_atividades")
 }
 
@@ -310,25 +408,39 @@ model Hospedagem {
   id            String             @id @default(uuid())
   osId          String             @map("os_id")
   fornecedorId  String             @map("fornecedor_id")
+  tarifaId      String?            @map("tarifa_id")
   hotelNome     String             @map("hotel_nome")
   checkin       DateTime
   checkout      DateTime
   quartos       Int?
+  tipoQuarto    String?            @map("tipo_quarto")
   regime        RegimeHospedagem?
   custoTotal    Decimal?           @map("custo_total") @db.Decimal(12, 2)
   moeda         Moeda              @default(BRL)
+  observacoes   String?            @db.Text
   reservasRefs  Json?              @map("reservas_refs")
+
+  // Controle de Pagamento
+  statusPagamento     StatusPagamento @default(pendente) @map("status_pagamento")
+  dataPagamento       DateTime?       @map("data_pagamento") @db.Date
+  formaPagamento      String?         @map("forma_pagamento")
+  referenciaPagamento String?         @map("referencia_pagamento")
+
   createdAt     DateTime           @default(now()) @map("created_at")
   updatedAt     DateTime           @updatedAt @map("updated_at")
 
   // Relations
-  os         OS         @relation(fields: [osId], references: [id], onDelete: Cascade)
-  fornecedor Fornecedor @relation(fields: [fornecedorId], references: [id])
+  os         OS                 @relation(fields: [osId], references: [id], onDelete: Cascade)
+  fornecedor Fornecedor         @relation(fields: [fornecedorId], references: [id])
+  tarifa     FornecedorTarifa?  @relation(fields: [tarifaId], references: [id])
 
   @@index([osId])
   @@index([fornecedorId])
+  @@index([tarifaId])
   @@index([checkin])
   @@index([checkout])
+  @@index([statusPagamento])
+  @@index([statusPagamento, checkout]) // Índice composto para alertas de despesas vencidas
   @@map("os_hospedagens")
 }
 
@@ -344,6 +456,13 @@ model Transporte {
   custo        Decimal?        @db.Decimal(12, 2)
   moeda        Moeda           @default(BRL)
   detalhes     Json?
+
+  // Controle de Pagamento
+  statusPagamento     StatusPagamento @default(pendente) @map("status_pagamento")
+  dataPagamento       DateTime?       @map("data_pagamento") @db.Date
+  formaPagamento      String?         @map("forma_pagamento")
+  referenciaPagamento String?         @map("referencia_pagamento")
+
   createdAt    DateTime        @default(now()) @map("created_at")
   updatedAt    DateTime        @updatedAt @map("updated_at")
 
@@ -355,6 +474,8 @@ model Transporte {
   @@index([tipo])
   @@index([dataPartida])
   @@index([dataChegada])
+  @@index([statusPagamento])
+  @@index([statusPagamento, dataPartida]) // Índice composto para alertas de despesas vencidas
   @@map("os_transportes")
 }
 
@@ -370,6 +491,13 @@ model PassagemAerea {
   dataChegada  DateTime?               @map("data_chegada")
   custo        Decimal?                @db.Decimal(12, 2)
   moeda        Moeda                   @default(BRL)
+
+  // Controle de Pagamento
+  statusPagamento     StatusPagamento @default(pendente) @map("status_pagamento")
+  dataPagamento       DateTime?       @map("data_pagamento") @db.Date
+  formaPagamento      String?         @map("forma_pagamento")
+  referenciaPagamento String?         @map("referencia_pagamento")
+
   createdAt    DateTime                @default(now()) @map("created_at")
   updatedAt    DateTime                @updatedAt @map("updated_at")
 
@@ -379,6 +507,7 @@ model PassagemAerea {
   @@index([osId])
   @@index([categoria])
   @@index([dataPartida])
+  @@index([statusPagamento])
   @@map("os_passagens_aereas")
 }
 
@@ -466,6 +595,61 @@ model LancamentoFinanceiro {
   @@map("financeiro_lancamentos")
 }
 
+// ============================================
+// PAGAMENTOS OS (Controle de Parcelas)
+// ============================================
+
+model PagamentoOS {
+  id              String          @id @default(uuid())
+  orgId           String          @map("org_id")
+  osId            String          @map("os_id")
+
+  // Tipo: 'entrada' (recebimento do cliente) ou 'saida' (pagamento a fornecedor)
+  tipo            String          // 'entrada' | 'saida'
+  descricao       String          // Ex: "Entrada 30%", "Saldo 70%", "Pagamento Hotel"
+
+  // Valores
+  valor           Decimal         @db.Decimal(12, 2)
+  moeda           Moeda           @default(BRL)
+
+  // Datas
+  dataVencimento  DateTime        @map("data_vencimento") @db.Date
+  dataPagamento   DateTime?       @map("data_pagamento") @db.Date
+
+  // Status
+  status          StatusPagamento @default(pendente)
+
+  // Detalhes do pagamento
+  formaPagamento  String?         @map("forma_pagamento") // pix, cartao_credito, boleto, dinheiro, transferencia
+  referencia      String?         // Número de referência, transação, nota fiscal, etc
+  comprovanteUrl  String?         @map("comprovante_url")
+
+  // Relacionamento (opcional) com fornecedor para pagamentos de saída
+  fornecedorId    String?         @map("fornecedor_id")
+
+  // Observações
+  observacoes     String?         @db.Text
+
+  createdAt       DateTime        @default(now()) @map("created_at")
+  updatedAt       DateTime        @updatedAt @map("updated_at")
+
+  // Relations
+  organizacao Organizacao @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  os          OS          @relation(fields: [osId], references: [id], onDelete: Cascade)
+  fornecedor  Fornecedor? @relation(fields: [fornecedorId], references: [id])
+
+  @@index([orgId])
+  @@index([osId])
+  @@index([tipo])
+  @@index([status])
+  @@index([dataVencimento])
+  @@index([dataPagamento])
+  @@index([fornecedorId])
+  @@index([orgId, status, dataVencimento]) // Índice composto para alertas
+  @@index([status, dataVencimento]) // Índice para consultas de pagamentos pendentes
+  @@map("os_pagamentos")
+}
+
 model Anotacao {
   id        String   @id @default(uuid())
   osId      String   @map("os_id")
@@ -523,4 +707,205 @@ model EventoCalendario {
   @@index([inicio])
   @@index([tipo])
   @@map("calendario_eventos")
+}
+
+// ============================================
+// PRESETS (Alergias, Restrições, Preferências)
+// ============================================
+
+enum PresetTipo {
+  alergia
+  restricao
+  preferencia
+}
+
+model PresetCategory {
+  id        String     @id @default(uuid())
+  orgId     String     @map("org_id")
+  nome      String
+  tipo      PresetTipo
+  parentId  String?    @map("parent_id")
+  ordem     Int?       
+  ativo     Boolean    @default(true)
+  createdAt DateTime   @default(now()) @map("created_at")
+  updatedAt DateTime   @updatedAt @map("updated_at")
+
+  // Relations
+  organizacao Organizacao   @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  parent      PresetCategory? @relation("PresetCategoryToParent", fields: [parentId], references: [id])
+  children    PresetCategory[] @relation("PresetCategoryToParent")
+  items       PresetItem[]
+
+  @@index([orgId])
+  @@index([tipo])
+  @@index([parentId])
+  @@index([nome])
+  @@map("preset_categories")
+}
+
+model PresetItem {
+  id          String      @id @default(uuid())
+  orgId       String      @map("org_id")
+  categoriaId String?     @map("categoria_id")
+  tipo        PresetTipo
+  label       String
+  descricao   String?
+  ordem       Int?
+  ativo       Boolean     @default(true)
+  usoCount    Int         @default(0) @map("uso_count")
+  ultimoUso   DateTime?   @map("ultimo_uso")
+  createdAt   DateTime    @default(now()) @map("created_at")
+  updatedAt   DateTime    @updatedAt @map("updated_at")
+
+  // Relations
+  organizacao Organizacao  @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  categoria   PresetCategory? @relation(fields: [categoriaId], references: [id])
+  templateItems PresetTemplateItem[]
+
+  @@index([orgId])
+  @@index([categoriaId])
+  @@index([tipo])
+  @@index([label])
+  @@index([usoCount])
+  @@index([ultimoUso])
+  @@map("preset_items")
+}
+
+// ============================================
+// TEMPLATES (Combinações comuns)
+// ============================================
+
+model PresetTemplate {
+  id          String      @id @default(uuid())
+  orgId       String      @map("org_id")
+  nome        String
+  descricao   String?
+  tipo        PresetTipo
+  ativo       Boolean     @default(true)
+  usoCount    Int         @default(0) @map("uso_count")
+  ultimoUso   DateTime?   @map("ultimo_uso")
+  createdAt   DateTime    @default(now()) @map("created_at")
+  updatedAt   DateTime    @updatedAt @map("updated_at")
+
+  // Relations
+  organizacao Organizacao @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  items       PresetTemplateItem[]
+
+  @@index([orgId])
+  @@index([tipo])
+  @@index([nome])
+  @@index([usoCount])
+  @@map("preset_templates")
+}
+
+model PresetTemplateItem {
+  id         String         @id @default(uuid())
+  templateId String         @map("template_id")
+  itemId     String         @map("item_id")
+  ordem      Int?
+  createdAt  DateTime       @default(now()) @map("created_at")
+
+  // Relations
+  template PresetTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  item     PresetItem     @relation(fields: [itemId], references: [id], onDelete: Cascade)
+
+  @@unique([templateId, itemId])
+  @@index([templateId])
+  @@index([itemId])
+  @@map("preset_template_items")
+}
+
+// ============================================
+// AUDITORIA (Sistema de Logs)
+// ============================================
+
+model AuditoriaOS {
+  id           String            @id @default(uuid())
+  orgId        String            @map("org_id")
+  osId         String            @map("os_id")
+
+  // Quem fez a ação
+  usuarioId    String            @map("usuario_id")
+  usuarioNome  String            @map("usuario_nome") // Snapshot do nome no momento da ação
+  usuarioRole  RoleGlobal        @map("usuario_role") // Snapshot do role no momento da ação
+
+  // O que foi feito
+  acao         AcaoAuditoria
+  entidade     EntidadeAuditoria
+  entidadeId   String?           @map("entidade_id") // ID do registro afetado (participante, atividade, etc)
+
+  // Detalhes da alteração
+  dadosAntigos Json?             @map("dados_antigos") // Estado antes da alteração
+  dadosNovos   Json?             @map("dados_novos")   // Estado depois da alteração
+  campos       String[]          // Lista de campos que foram alterados
+
+  // Contexto adicional
+  descricao    String?           // Descrição legível da ação
+  metadata     Json?             // Informações extras (IP, user-agent, duração, etc)
+
+  // Quando aconteceu
+  createdAt    DateTime          @default(now()) @map("created_at")
+
+  // Relations
+  organizacao  Organizacao       @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  os           OS                @relation(fields: [osId], references: [id], onDelete: Cascade)
+  usuario      Usuario           @relation(fields: [usuarioId], references: [id])
+
+  @@index([orgId])
+  @@index([osId])
+  @@index([usuarioId])
+  @@index([acao])
+  @@index([entidade])
+  @@index([entidadeId])
+  @@index([createdAt])
+  @@index([osId, createdAt]) // Índice composto para queries de timeline
+  @@index([osId, entidade])  // Índice composto para filtrar por entidade em uma OS
+  @@map("auditoria_os")
+}
+
+// ============================================
+// POLÍTICAS (Regras configuráveis por organização)
+// ============================================
+
+model OrganizacaoPolicy {
+  id          String     @id @default(uuid())
+  orgId       String     @map("org_id")
+  nome        String
+  descricao   String?
+  versao      Int        @default(1)
+  ativa       Boolean    @default(false)
+
+  // Blocos de configuração (JSON para flexibilidade e evolução)
+  financeiro  Json       // { margemMinimaPercentual: number, entradaMinimaPercentual: number, toleranciaCustoRealAcimaEstimadoPercentual: number }
+  prazos      Json       // { prazoMinimoGuiaDias: number, prazoMinimoMotoristaDias: number, prazoMinimoHospedagemDias: number }
+  checklistsOverrides Json? @map("checklists_overrides") // Overrides por transição de status
+
+  createdAt   DateTime   @default(now()) @map("created_at")
+  updatedAt   DateTime   @updatedAt @map("updated_at")
+
+  // Relations
+  organizacao Organizacao @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  osSnapshots OSPolicySnapshot[]
+
+  @@index([orgId])
+  @@index([orgId, ativa])
+  @@index([orgId, versao])
+  @@map("organizacao_policies")
+}
+
+model OSPolicySnapshot {
+  id        String   @id @default(uuid())
+  osId      String   @map("os_id")
+  policyId  String   @map("policy_id")
+  versao    Int
+  snapshot  Json
+  appliedAt DateTime @default(now()) @map("applied_at")
+
+  // Relations
+  os     OS                @relation(fields: [osId], references: [id], onDelete: Cascade)
+  policy OrganizacaoPolicy @relation(fields: [policyId], references: [id], onDelete: Cascade)
+
+  @@index([osId])
+  @@index([policyId])
+  @@map("os_policy_snapshots")
 }

@@ -1,0 +1,21 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(ls:*)",
+      "Bash(npm run type-check:*)",
+      "Bash(test -f .env)",
+      "Bash(npm run build:*)",
+      "Bash(npm run db:generate:*)",
+      "Bash(npm run db:seed:*)",
+      "Bash(npm run dev)",
+      "Bash(npx prisma migrate dev:*)",
+      "Bash(npx tsc:*)",
+      "Bash(npx prisma migrate:*)",
+      "Bash(npx prisma:*)",
+      "Bash(find:*)",
+      "Bash(psql:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

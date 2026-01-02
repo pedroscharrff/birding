@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db/prisma'
 import { requireAuth } from '@/lib/auth/session'
 import { createParticipanteSchema } from '@/lib/validators/participante'
+import { logAuditoria } from '@/lib/services/auditoria'
 
 // POST /api/os/[id]/participantes - Adicionar participante
 export async function POST(
@@ -18,6 +19,15 @@ export async function POST(
       ...body,
       osId,
     })
+
+    // Normalizar campos opcionais que podem chegar como string vazia
+    const { passaporteValidade, ...rest } = validatedData as any
+    const dataToCreate: any = { ...rest }
+    if (typeof passaporteValidade === 'string' && passaporteValidade.trim() === '') {
+      // não setar campo se veio vazio
+    } else if (passaporteValidade) {
+      dataToCreate.passaporteValidade = new Date(passaporteValidade)
+    }
     
     // Verificar se OS existe e pertence à organização
     const os = await prisma.oS.findFirst({
@@ -36,14 +46,28 @@ export async function POST(
     
     // Criar participante
     const participante = await prisma.participante.create({
-      data: {
-        ...validatedData,
-        ...(validatedData.passaporteValidade && {
-          passaporteValidade: new Date(validatedData.passaporteValidade),
-        }),
-      },
+      data: dataToCreate,
     })
-    
+
+    // Registrar auditoria
+    try {
+      await logAuditoria({
+        osId,
+        usuarioId: session.userId,
+        acao: 'criar',
+        entidade: 'participante',
+        entidadeId: participante.id,
+        dadosNovos: participante,
+        metadata: {
+          ip: request.headers.get('x-forwarded-for') || undefined,
+          userAgent: request.headers.get('user-agent') || undefined,
+        },
+      })
+    } catch (auditError) {
+      console.error('[Auditoria] Erro ao registrar log:', auditError)
+      // Não falha a operação se auditoria falhar
+    }
+
     return NextResponse.json(
       {
         success: true,

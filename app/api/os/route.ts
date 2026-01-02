@@ -2,25 +2,38 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db/prisma'
 import { requireAuth } from '@/lib/auth/session'
 import { createOSSchema, listOSQuerySchema } from '@/lib/validators/os'
+import { logAuditoria } from '@/lib/services/auditoria'
 
 // GET /api/os - Listar OS
 export async function GET(request: NextRequest) {
   try {
     const session = await requireAuth()
     const { searchParams } = new URL(request.url)
-    
-    // Validar query params
-    const query = listOSQuerySchema.parse({
+    console.log('[OS][GET] session', { orgId: session.orgId, userId: session.userId })
+    console.log('[OS][GET] rawParams', {
       status: searchParams.get('status'),
       agente: searchParams.get('agente'),
       destino: searchParams.get('destino'),
       dataInicio: searchParams.get('dataInicio'),
       dataFim: searchParams.get('dataFim'),
-      page: searchParams.get('page') || '1',
-      limit: searchParams.get('limit') || '20',
+      page: searchParams.get('page'),
+      limit: searchParams.get('limit'),
     })
     
+    // Validar query params
+    const query = listOSQuerySchema.parse({
+      status: searchParams.get('status') ?? undefined,
+      agente: searchParams.get('agente') ?? undefined,
+      destino: searchParams.get('destino') ?? undefined,
+      dataInicio: searchParams.get('dataInicio') ?? undefined,
+      dataFim: searchParams.get('dataFim') ?? undefined,
+      page: searchParams.get('page') ?? '1',
+      limit: searchParams.get('limit') ?? '20',
+    })
+    console.log('[OS][GET] parsedQuery', query)
+    
     const skip = (query.page - 1) * query.limit
+    console.log('[OS][GET] pagination', { skip, take: query.limit })
     
     // Construir filtros
     const where: any = {
@@ -54,34 +67,40 @@ export async function GET(request: NextRequest) {
       }
     }
     
-    // Buscar OS
-    const [os, total] = await Promise.all([
-      prisma.oS.findMany({
-        where,
-        skip,
-        take: query.limit,
-        include: {
-          agenteResponsavel: {
-            select: {
-              id: true,
-              nome: true,
-              email: true,
-            },
-          },
-          _count: {
-            select: {
-              participantes: true,
-              atividades: true,
-              hospedagens: true,
-            },
+    // Buscar total isoladamente para evitar OFFSET no COUNT
+    console.log('[OS][GET] where', where)
+    const total = await prisma.oS.count({ where: { ...where } })
+    console.log('[OS][GET] total', total)
+
+    // Buscar OS paginadas
+    const os = await prisma.oS.findMany({
+      where: { ...where },
+      skip,
+      take: query.limit,
+      include: {
+        agenteResponsavel: {
+          select: {
+            id: true,
+            nome: true,
+            email: true,
           },
         },
-        orderBy: {
-          dataInicio: 'desc',
+        _count: {
+          select: {
+            participantes: true,
+            atividades: true,
+            hospedagens: true,
+          },
         },
-      }),
-      prisma.oS.count({ where }),
-    ])
+      },
+      orderBy: {
+        dataInicio: 'desc',
+      },
+    })
+    console.log('[OS][GET] resultCount', os.length)
+    if (os.length) {
+      console.log('[OS][GET] firstItems', os.slice(0, 3).map((o) => ({ id: o.id, titulo: o.titulo, dataInicio: o.dataInicio })))
+    }
     
     return NextResponse.json({
       success: true,
@@ -100,6 +119,13 @@ export async function GET(request: NextRequest) {
       return NextResponse.json(
         { success: false, error: 'Não autenticado' },
         { status: 401 }
+      )
+    }
+    
+    if (error.name === 'ZodError') {
+      return NextResponse.json(
+        { success: false, error: 'Dados inválidos', details: error.errors },
+        { status: 400 }
       )
     }
     
@@ -147,7 +173,25 @@ export async function POST(request: NextRequest) {
         motivo: 'Criação da OS',
       },
     })
-    
+
+    // Registrar auditoria
+    try {
+      await logAuditoria({
+        osId: os.id,
+        usuarioId: session.userId,
+        acao: 'criar',
+        entidade: 'os',
+        entidadeId: os.id,
+        dadosNovos: os,
+        metadata: {
+          ip: request.headers.get('x-forwarded-for') || undefined,
+          userAgent: request.headers.get('user-agent') || undefined,
+        },
+      })
+    } catch (auditError) {
+      console.error('[Auditoria] Erro ao registrar log:', auditError)
+    }
+
     return NextResponse.json(
       {
         success: true,

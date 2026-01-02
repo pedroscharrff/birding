@@ -1,5 +1,5 @@
-import { getAccessTokenCookie } from './cookies'
-import { verifyAccessToken, JWTPayload } from './jwt'
+import { getAccessTokenCookie, getRefreshTokenCookie, setAccessTokenCookie } from './cookies'
+import { verifyAccessToken, verifyRefreshToken, signAccessToken, JWTPayload } from './jwt'
 
 /**
  * Obter sessão do usuário atual a partir do cookie
@@ -8,15 +8,45 @@ import { verifyAccessToken, JWTPayload } from './jwt'
 export async function getSession(): Promise<JWTPayload | null> {
   try {
     const token = await getAccessTokenCookie()
+    console.log('[AUTH][getSession] access token present?', Boolean(token))
     
     if (!token) {
-      return null
+      // Tentativa de refresh direto, caso não haja access token mas exista refresh token
+      const refreshToken = await getRefreshTokenCookie()
+      console.log('[AUTH][getSession] no access token, refresh present?', Boolean(refreshToken))
+      if (!refreshToken) return null
+      try {
+        const payload = await verifyRefreshToken(refreshToken)
+        const newAccess = await signAccessToken(payload)
+        await setAccessTokenCookie(newAccess)
+        console.log('[AUTH][getSession] refreshed from refresh-only path')
+        return payload
+      } catch (e) {
+        console.warn('[AUTH][getSession] refresh-only path failed')
+        return null
+      }
     }
 
     const payload = await verifyAccessToken(token)
+    console.log('[AUTH][getSession] payload', { userId: payload.userId, orgId: payload.orgId, role: payload.roleGlobal })
     return payload
   } catch (error) {
-    return null
+    // Access token inválido/expirado: tentar refresh token
+    // @ts-ignore
+    console.warn('[AUTH][getSession] access verify failed', error?.message || error)
+    try {
+      const refreshToken = await getRefreshTokenCookie()
+      console.log('[AUTH][getSession] attempting refresh, refresh present?', Boolean(refreshToken))
+      if (!refreshToken) return null
+      const payload = await verifyRefreshToken(refreshToken)
+      const newAccess = await signAccessToken(payload)
+      await setAccessTokenCookie(newAccess)
+      console.log('[AUTH][getSession] access refreshed successfully')
+      return payload
+    } catch (e) {
+      console.warn('[AUTH][getSession] refresh failed')
+      return null
+    }
   }
 }
 
