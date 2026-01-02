@@ -180,6 +180,7 @@ model Organizacao {
   presetTemplates       PresetTemplate[]
   auditorias            AuditoriaOS[]
   policies              OrganizacaoPolicy[]
+  cotacoes              Cotacao[]
 
   @@index([nome])
   @@map("organizacoes")
@@ -208,6 +209,7 @@ model Usuario {
   anotacoes              Anotacao[]
   historicoStatus        HistoricoStatus[]
   auditorias             AuditoriaOS[]
+  cotacoes               Cotacao[]
 
   @@index([orgId])
   @@index([email])
@@ -238,6 +240,7 @@ model Fornecedor {
   lancamentosFinanceiros LancamentoFinanceiro[]
   pagamentosOS           PagamentoOS[]
   tarifas                FornecedorTarifa[]
+  cotacaoItens           CotacaoItem[]
 
   @@index([orgId])
   @@index([tipo])
@@ -908,4 +911,80 @@ model OSPolicySnapshot {
   @@index([osId])
   @@index([policyId])
   @@map("os_policy_snapshots")
+}
+
+// ============================================
+// COTAÇÕES (Sistema de Cotações Rápidas)
+// ============================================
+
+enum StatusCotacao {
+  rascunho
+  enviada
+  aceita
+  perdida
+  expirada
+}
+
+model Cotacao {
+  id                   String         @id @default(uuid())
+  orgId                String         @map("org_id")
+  titulo               String
+  clienteNome          String         @map("cliente_nome")
+  clienteEmail         String?        @map("cliente_email")
+  clienteTelefone      String?        @map("cliente_telefone")
+  destino              String
+  dataInicio           DateTime?      @map("data_inicio") @db.Date
+  dataFim              DateTime?      @map("data_fim") @db.Date
+  statusCotacao        StatusCotacao  @default(rascunho) @map("status_cotacao")
+  observacoesInternas  String?        @map("observacoes_internas") @db.Text
+  observacoesCliente   String?        @map("observacoes_cliente") @db.Text
+  responsavelId        String         @map("responsavel_id")
+  valorTotal           Decimal?       @map("valor_total") @db.Decimal(12, 2)
+  moeda                Moeda          @default(BRL)
+  createdAt            DateTime       @default(now()) @map("created_at")
+  updatedAt            DateTime       @updatedAt @map("updated_at")
+
+  // Relations
+  organizacao   Organizacao      @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  responsavel   Usuario          @relation(fields: [responsavelId], references: [id])
+  itens         CotacaoItem[]
+
+  @@index([orgId])
+  @@index([responsavelId])
+  @@index([statusCotacao])
+  @@index([dataInicio])
+  @@index([createdAt])
+  @@map("cotacoes")
+}
+
+enum CategoriaCotacaoItem {
+  hospedagem
+  atividade
+  transporte
+  alimentacao
+}
+
+model CotacaoItem {
+  id              String                @id @default(uuid())
+  cotacaoId       String                @map("cotacao_id")
+  categoria       CategoriaCotacaoItem
+  fornecedorId    String?               @map("fornecedor_id")
+  tarifaId        String?               @map("tarifa_id")
+  descricao       String
+  quantidade      Int
+  valorUnitario   Decimal               @map("valor_unitario") @db.Decimal(12, 2)
+  moeda           Moeda                 @default(BRL)
+  subtotal        Decimal               @db.Decimal(12, 2)
+  observacoes     String?               @db.Text
+  createdAt       DateTime              @default(now()) @map("created_at")
+  updatedAt       DateTime              @updatedAt @map("updated_at")
+
+  // Relations
+  cotacao     Cotacao      @relation(fields: [cotacaoId], references: [id], onDelete: Cascade)
+  fornecedor  Fornecedor?  @relation(fields: [fornecedorId], references: [id])
+
+  @@index([cotacaoId])
+  @@index([fornecedorId])
+  @@index([categoria])
+  @@map("cotacao_itens")
 }
