@@ -72,6 +72,12 @@ export default function DashboardLayout({
                   Financeiro
                 </Link>
                 <Link
+                  href="/dashboard/cotacoes"
+                  className="text-gray-600 hover:text-gray-900 transition"
+                >
+                  Cotações Rápidas
+                </Link>
+                <Link
                   href="/dashboard/fornecedores"
                   className="text-gray-600 hover:text-gray-900 transition"
                 >
