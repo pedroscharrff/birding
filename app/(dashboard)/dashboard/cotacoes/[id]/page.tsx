@@ -183,11 +183,73 @@ export default function CotacaoDetalhesPage() {
     })
   }
 
-  const handleConverterParaOS = () => {
-    toast({
-      title: "Funcionalidade em desenvolvimento",
-      description: "Conversão para OS será implementada em breve",
-    })
+  const handleConverterParaOS = async () => {
+    if (!confirm("Deseja converter esta cotação em uma Ordem de Serviço (OS)?")) {
+      return
+    }
+
+    setLoading(true)
+    try {
+      const cotacaoCompleta = {
+        id: params.id,
+        titulo: watch("titulo"),
+        clienteNome: watch("clienteNome"),
+        clienteEmail: watch("clienteEmail"),
+        clienteTelefone: watch("clienteTelefone"),
+        destino: watch("destino"),
+        dataInicio: watch("dataInicio"),
+        dataFim: watch("dataFim"),
+        statusCotacao: watch("statusCotacao"),
+        observacoesInternas: watch("observacoesInternas"),
+        observacoesCliente: watch("observacoesCliente"),
+        hospedagens,
+        atividades,
+        transportes,
+        alimentacoes,
+      }
+
+      const response = await fetch(`/api/cotacoes/${params.id}/converter-para-os`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          cotacao: cotacaoCompleta,
+        }),
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || "Erro ao converter cotação")
+      }
+
+      toast({
+        title: "Sucesso!",
+        description: data.message || "Cotação convertida em OS com sucesso",
+        variant: "success",
+      })
+
+      if (data.warnings && data.warnings.length > 0) {
+        setTimeout(() => {
+          toast({
+            title: "Avisos",
+            description: data.warnings.join("\n"),
+            variant: "default",
+          })
+        }, 1000)
+      }
+
+      router.push(`/dashboard/os/${data.osId}`)
+    } catch (error: any) {
+      toast({
+        title: "Erro ao converter cotação",
+        description: error.message || "Tente novamente mais tarde",
+        variant: "destructive",
+      })
+    } finally {
+      setLoading(false)
+    }
   }
 
   const handleExportarPDF = () => {

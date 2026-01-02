@@ -167,20 +167,29 @@ export function CreateCotacaoDialog({ onSuccess }: CreateCotacaoDialogProps) {
 
     setLoading(true)
     try {
-      const totais = calcularTotal()
-      
-      console.log("Dados da cotação:", {
-        ...values,
-        hospedagens,
-        atividades,
-        transportes,
-        alimentacoes,
-        totais,
+      const response = await fetch("/api/cotacoes", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          ...values,
+          hospedagens,
+          atividades,
+          transportes,
+          alimentacoes,
+        }),
       })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || "Erro ao criar cotação")
+      }
 
       toast({
         title: "Sucesso!",
-        description: "Cotação rápida criada com sucesso (mock - API ainda não implementada)",
+        description: data.message || "Cotação criada com sucesso",
         variant: "success",
       })
 
@@ -189,6 +198,7 @@ export function CreateCotacaoDialog({ onSuccess }: CreateCotacaoDialogProps) {
       setAtividades([])
       setTransportes([])
       setAlimentacoes([])
+      setSelectedTemplate("")
       setOpen(false)
       onSuccess?.()
     } catch (error: any) {
