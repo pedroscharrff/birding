@@ -15,6 +15,7 @@ export function CotacaoAtividadesSection({ items, onChange }: CotacaoAtividadesS
       sectionTitle="Atividades"
       quantityLabel="Pax"
       quantityPlaceholder="Ex: 4"
+      tipoFornecedor="atividade"
     />
   )
 }
