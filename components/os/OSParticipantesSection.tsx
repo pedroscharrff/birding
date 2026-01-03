@@ -7,6 +7,7 @@ import { Plus, Mail, Phone, User, Edit2, Trash2 } from 'lucide-react'
 import { useToast } from '@/hooks/useToast'
 import { format } from 'date-fns'
 import { ParticipanteFormDialog, ParticipanteFormData } from '@/components/forms/ParticipanteFormDialog'
+import { UploadedFile } from '@/components/ui/file-upload'
 
 interface Participante {
   id: string
@@ -20,6 +21,7 @@ interface Participante {
   preferencias?: string
   idade?: number
   observacoes?: string
+  documentos?: UploadedFile[]
 }
 
 interface OSParticipantesSectionProps {
@@ -380,6 +382,7 @@ export function OSParticipantesSection({ osId, participantes, onUpdate }: OSPart
         loading={loading}
         mode={editingParticipante ? 'edit' : 'create'}
         initialData={editingParticipante ? {
+          id: editingParticipante.id,
           nome: editingParticipante.nome,
           email: editingParticipante.email,
           telefone: editingParticipante.telefone || '',
@@ -390,6 +393,7 @@ export function OSParticipantesSection({ osId, participantes, onUpdate }: OSPart
           preferencias: editingParticipante.preferencias || '',
           idade: editingParticipante.idade?.toString() || '',
           observacoes: editingParticipante.observacoes || '',
+          documentos: editingParticipante.documentos || [],
         } : undefined}
       />
     </>

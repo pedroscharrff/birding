@@ -134,6 +134,7 @@ export async function atualizarStatusPagamentoDespesa(
     dataPagamento?: Date | null
     formaPagamento?: string | null
     referenciaPagamento?: string | null
+    comprovantes?: any[] | null
   }
 ) {
   const updateData: any = {
@@ -148,6 +149,9 @@ export async function atualizarStatusPagamentoDespesa(
   }
   if (dados.referenciaPagamento !== undefined) {
     updateData.referenciaPagamento = dados.referenciaPagamento
+  }
+  if (dados.comprovantes !== undefined) {
+    updateData.comprovantes = dados.comprovantes
   }
 
   switch (tipo) {

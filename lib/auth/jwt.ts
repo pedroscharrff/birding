@@ -48,3 +48,42 @@ export async function verifyRefreshToken(token: string): Promise<JWTPayload> {
     throw new Error('Refresh token inválido ou expirado')
   }
 }
+
+export async function verifyAuth(request: Request): Promise<{
+  valid: boolean
+  payload?: JWTPayload
+  error?: string
+}> {
+  try {
+    // Tentar pegar token do header Authorization primeiro
+    const authHeader = request.headers.get('authorization')
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      const token = authHeader.substring(7)
+      const payload = await verifyAccessToken(token)
+      return { valid: true, payload }
+    }
+
+    // Se não houver Bearer token, tentar pegar do cookie
+    const cookieHeader = request.headers.get('cookie')
+    if (!cookieHeader) {
+      return { valid: false, error: 'Token não fornecido' }
+    }
+
+    // Extrair token do cookie
+    const cookies = cookieHeader.split(';').reduce((acc, cookie) => {
+      const [key, value] = cookie.trim().split('=')
+      acc[key] = value
+      return acc
+    }, {} as Record<string, string>)
+
+    const token = cookies['accessToken']
+    if (!token) {
+      return { valid: false, error: 'Token não fornecido' }
+    }
+
+    const payload = await verifyAccessToken(token)
+    return { valid: true, payload }
+  } catch (error) {
+    return { valid: false, error: 'Token inválido ou expirado' }
+  }
+}

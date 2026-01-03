@@ -1,5 +1,15 @@
 import { z } from 'zod'
 
+// Schema para arquivo uploadado
+const uploadedFileSchema = z.object({
+  url: z.string(),
+  key: z.string(),
+  fileName: z.string(),
+  contentType: z.string(),
+  size: z.number(),
+  uploadedAt: z.string(),
+})
+
 export const createParticipanteSchema = z.object({
   osId: z.string().uuid('ID da OS inválido'),
   nome: z.string().min(2, 'Nome deve ter no mínimo 2 caracteres'),
@@ -12,6 +22,7 @@ export const createParticipanteSchema = z.object({
   preferencias: z.string().optional(),
   idade: z.number().int().positive().optional(),
   observacoes: z.string().optional(),
+  documentos: z.array(uploadedFileSchema).optional(),
 })
 
 export const updateParticipanteSchema = createParticipanteSchema.partial().omit({ osId: true })

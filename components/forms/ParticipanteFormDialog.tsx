@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { PresetsMultiSelect } from '@/components/presets/PresetsMultiSelect'
+import { FileUpload, UploadedFile } from '@/components/ui/file-upload'
 import { User, Mail, Phone, FileText, AlertCircle, CheckCircle2, ChevronRight, Heart, Utensils, Sparkles } from 'lucide-react'
 import { cn } from '@/lib/utils/cn'
 
@@ -21,6 +22,7 @@ interface ParticipanteFormDialogProps {
 }
 
 export interface ParticipanteFormData {
+  id?: string
   nome: string
   email: string
   telefone: string
@@ -31,6 +33,7 @@ export interface ParticipanteFormData {
   preferencias: string
   idade: string
   observacoes: string
+  documentos?: UploadedFile[]
 }
 
 const initialFormData: ParticipanteFormData = {
@@ -65,6 +68,7 @@ export function ParticipanteFormDialog({
   const [errors, setErrors] = useState<ValidationErrors>({})
   const [activeTab, setActiveTab] = useState('dados-basicos')
   const [touchedFields, setTouchedFields] = useState<Set<string>>(new Set())
+  const [documentos, setDocumentos] = useState<UploadedFile[]>(initialData?.documentos || [])
 
   // Reset form when dialog closes or load initial data in edit mode
   useEffect(() => {
@@ -73,6 +77,7 @@ export function ParticipanteFormDialog({
       setErrors({})
       setActiveTab('dados-basicos')
       setTouchedFields(new Set())
+      setDocumentos([])
     } else if (mode === 'edit' && initialData) {
       setFormData({
         nome: initialData.nome || '',
@@ -86,6 +91,7 @@ export function ParticipanteFormDialog({
         idade: initialData.idade || '',
         observacoes: initialData.observacoes || '',
       })
+      setDocumentos(initialData.documentos || [])
     }
   }, [open, mode, initialData])
 
@@ -116,11 +122,11 @@ export function ParticipanteFormDialog({
     }
   }
 
-  const handleFieldChange = (name: string, value: string) => {
+  const handleFieldChange = (name: string, value: string | UploadedFile[]) => {
     setFormData(prev => ({ ...prev, [name]: value }))
     
-    // Validar apenas se o campo já foi tocado
-    if (touchedFields.has(name)) {
+    // Validar apenas se o campo já foi tocado e o valor for string
+    if (touchedFields.has(name) && typeof value === 'string') {
       const error = validateField(name as keyof ValidationErrors, value)
       setErrors(prev => ({
         ...prev,
@@ -131,11 +137,14 @@ export function ParticipanteFormDialog({
 
   const handleFieldBlur = (name: string) => {
     setTouchedFields(prev => new Set(prev).add(name))
-    const error = validateField(name as keyof ValidationErrors, formData[name as keyof ParticipanteFormData])
-    setErrors(prev => ({
-      ...prev,
-      [name]: error
-    }))
+    const value = formData[name as keyof ParticipanteFormData]
+    if (typeof value === 'string') {
+      const error = validateField(name as keyof ValidationErrors, value)
+      setErrors(prev => ({
+        ...prev,
+        [name]: error
+      }))
+    }
   }
 
   // Máscara de telefone
@@ -182,7 +191,10 @@ export function ParticipanteFormDialog({
       return
     }
     
-    await onSubmit(formData)
+    await onSubmit({
+      ...formData,
+      documentos
+    })
   }
 
   // Verificar se a aba de dados básicos está completa
@@ -210,7 +222,7 @@ export function ParticipanteFormDialog({
         </DialogHeader>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 overflow-hidden flex flex-col">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-5">
             <TabsTrigger value="dados-basicos" className="relative">
               <span className="flex items-center gap-1.5 text-xs sm:text-sm">
                 <User className="h-4 w-4" />
@@ -227,6 +239,16 @@ export function ParticipanteFormDialog({
                 <span className="hidden sm:inline">Documentos</span>
                 <span className="sm:hidden">Docs</span>
                 {hasDocumentos && (
+                  <CheckCircle2 className="h-3.5 w-3.5 text-green-600" />
+                )}
+              </span>
+            </TabsTrigger>
+            <TabsTrigger value="arquivos" className="relative">
+              <span className="flex items-center gap-1.5 text-xs sm:text-sm">
+                <FileText className="h-4 w-4" />
+                <span className="hidden sm:inline">Arquivos</span>
+                <span className="sm:hidden">Files</span>
+                {documentos.length > 0 && (
                   <CheckCircle2 className="h-3.5 w-3.5 text-green-600" />
                 )}
               </span>
@@ -423,6 +445,51 @@ export function ParticipanteFormDialog({
                   </Button>
                   <Button
                     type="button"
+                    onClick={() => setActiveTab('arquivos')}
+                    variant="outline"
+                  >
+                    Próximo: Arquivos
+                    <ChevronRight className="h-4 w-4 ml-2" />
+                  </Button>
+                </div>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="arquivos" className="space-y-5 m-0">
+              <div className="space-y-5">
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                  <div className="flex items-start gap-3">
+                    <FileText className="h-5 w-5 text-blue-600 mt-0.5" />
+                    <div>
+                      <p className="text-sm font-semibold text-blue-900">Documentos do Participante</p>
+                      <p className="text-sm text-blue-800 mt-1">
+                        Faça upload de documentos como passaporte, identidade, certificados de vacinação, etc.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <FileUpload
+                  folder="participantes"
+                  entityId={initialData?.id || 'temp'}
+                  existingFiles={documentos}
+                  onFilesChange={setDocumentos}
+                  maxFiles={5}
+                  maxSizeMB={10}
+                  acceptedTypes={['application/pdf', 'image/*']}
+                  disabled={loading}
+                />
+
+                <div className="flex justify-between pt-4">
+                  <Button
+                    type="button"
+                    onClick={() => setActiveTab('documentos')}
+                    variant="outline"
+                  >
+                    Voltar
+                  </Button>
+                  <Button
+                    type="button"
                     onClick={() => setActiveTab('alergias')}
                     variant="outline"
                   >
@@ -467,7 +534,7 @@ export function ParticipanteFormDialog({
                 <div className="flex justify-between pt-4">
                   <Button
                     type="button"
-                    onClick={() => setActiveTab('documentos')}
+                    onClick={() => setActiveTab('arquivos')}
                     variant="outline"
                   >
                     Voltar

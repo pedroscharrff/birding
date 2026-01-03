@@ -6,6 +6,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { FileUpload, UploadedFile } from '@/components/ui/file-upload'
 
 interface DespesaPagarDialogProps {
   open: boolean
@@ -23,6 +24,7 @@ interface DespesaPagarDialogProps {
 export function DespesaPagarDialog({ open, onOpenChange, osId, despesa, onSuccess }: DespesaPagarDialogProps) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [comprovantes, setComprovantes] = useState<UploadedFile[]>([])
 
   const [formData, setFormData] = useState({
     dataPagamento: '',
@@ -44,6 +46,7 @@ export function DespesaPagarDialog({ open, onOpenChange, osId, despesa, onSucces
         dataPagamento: formData.dataPagamento || null,
         formaPagamento: formData.formaPagamento || null,
         referenciaPagamento: formData.referenciaPagamento || null,
+        comprovantes: comprovantes.length > 0 ? comprovantes : null,
       }
 
       const res = await fetch(`/api/os/${osId}/despesas/${despesa.tipo}/${despesa.id}`, {
@@ -136,6 +139,25 @@ export function DespesaPagarDialog({ open, onOpenChange, osId, despesa, onSucces
                 </SelectContent>
               </Select>
             </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label>Comprovantes de Pagamento</Label>
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+              <p className="text-xs text-blue-800">
+                Anexe comprovantes de transferência, notas fiscais, recibos, etc.
+              </p>
+            </div>
+            <FileUpload
+              folder="pagamentos"
+              entityId={despesa?.id || 'temp'}
+              existingFiles={comprovantes}
+              onFilesChange={setComprovantes}
+              maxFiles={3}
+              maxSizeMB={5}
+              acceptedTypes={['application/pdf', 'image/*']}
+              disabled={loading}
+            />
           </div>
 
           <DialogFooter>

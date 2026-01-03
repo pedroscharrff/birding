@@ -228,6 +228,10 @@ model Fornecedor {
   documento     String?
   endereco      Json?
   obs           String?
+  
+  // Arquivos/Documentos
+  arquivos      Json?           // Array de { url, key, fileName, contentType, uploadedAt, categoria }
+  
   createdAt     DateTime        @default(now()) @map("created_at")
   updatedAt     DateTime        @updatedAt @map("updated_at")
 
@@ -294,6 +298,9 @@ model OS {
   margemEstimada        Decimal?   @map("margem_estimada") @db.Decimal(5, 2) // Percentual
   obsFinanceiras        String?    @map("obs_financeiras") @db.Text
 
+  // Arquivos/Documentos
+  arquivos              Json?      // Array de { url, key, fileName, contentType, uploadedAt, categoria }
+
   createdAt             DateTime   @default(now()) @map("created_at")
   updatedAt             DateTime   @updatedAt @map("updated_at")
 
@@ -339,6 +346,10 @@ model Participante {
   preferencias        String?
   idade               Int?
   observacoes         String?
+  
+  // Arquivos/Documentos
+  documentos          Json?     // Array de { url, key, fileName, contentType, uploadedAt }
+  
   createdAt           DateTime  @default(now()) @map("created_at")
   updatedAt           DateTime  @updatedAt @map("updated_at")
 
@@ -392,6 +403,9 @@ model Atividade {
   formaPagamento      String?         @map("forma_pagamento")
   referenciaPagamento String?         @map("referencia_pagamento")
 
+  // Arquivos (vouchers, confirmações)
+  arquivos          Json?       // Array de { url, key, fileName, contentType, uploadedAt }
+
   createdAt         DateTime    @default(now()) @map("created_at")
   updatedAt         DateTime    @updatedAt @map("updated_at")
 
@@ -428,6 +442,9 @@ model Hospedagem {
   dataPagamento       DateTime?       @map("data_pagamento") @db.Date
   formaPagamento      String?         @map("forma_pagamento")
   referenciaPagamento String?         @map("referencia_pagamento")
+
+  // Arquivos (vouchers, confirmações)
+  arquivos      Json?              // Array de { url, key, fileName, contentType, uploadedAt }
 
   createdAt     DateTime           @default(now()) @map("created_at")
   updatedAt     DateTime           @updatedAt @map("updated_at")
@@ -466,6 +483,9 @@ model Transporte {
   formaPagamento      String?         @map("forma_pagamento")
   referenciaPagamento String?         @map("referencia_pagamento")
 
+  // Arquivos (vouchers, confirmações)
+  arquivos     Json?           // Array de { url, key, fileName, contentType, uploadedAt }
+
   createdAt    DateTime        @default(now()) @map("created_at")
   updatedAt    DateTime        @updatedAt @map("updated_at")
 
@@ -500,6 +520,9 @@ model PassagemAerea {
   dataPagamento       DateTime?       @map("data_pagamento") @db.Date
   formaPagamento      String?         @map("forma_pagamento")
   referenciaPagamento String?         @map("referencia_pagamento")
+
+  // Arquivos (bilhetes, vouchers)
+  arquivos     Json?                   // Array de { url, key, fileName, contentType, uploadedAt }
 
   createdAt    DateTime                @default(now()) @map("created_at")
   updatedAt    DateTime                @updatedAt @map("updated_at")
@@ -941,6 +964,10 @@ model Cotacao {
   responsavelId        String         @map("responsavel_id")
   valorTotal           Decimal?       @map("valor_total") @db.Decimal(12, 2)
   moeda                Moeda          @default(BRL)
+  
+  // Arquivos (propostas PDF, anexos)
+  arquivos             Json?          // Array de { url, key, fileName, contentType, uploadedAt }
+  
   createdAt            DateTime       @default(now()) @map("created_at")
   updatedAt            DateTime       @updatedAt @map("updated_at")
 

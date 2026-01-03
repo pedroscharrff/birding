@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { useToast } from '@/hooks/useToast'
+import { FileUpload, UploadedFile } from '@/components/ui/file-upload'
 import { Building2, Mail, Phone, FileText, MapPin, Save, X } from 'lucide-react'
 
 type TipoFornecedor = 'hotelaria' | 'guiamento' | 'transporte' | 'alimentacao' | 'atividade' | 'outros'
@@ -29,6 +30,7 @@ interface Fornecedor {
     cep?: string
   } | null
   obs?: string | null
+  arquivos?: UploadedFile[]
 }
 
 interface FornecedorFormDialogProps {
@@ -49,6 +51,7 @@ const tipoOptions: { value: TipoFornecedor; label: string }[] = [
 export function FornecedorFormDialog({ open, onClose, fornecedor }: FornecedorFormDialogProps) {
   const { toast } = useToast()
   const [loading, setLoading] = useState(false)
+  const [arquivos, setArquivos] = useState<UploadedFile[]>([])
   
   const [formData, setFormData] = useState({
     nomeFantasia: '',
@@ -89,6 +92,7 @@ export function FornecedorFormDialog({ open, onClose, fornecedor }: FornecedorFo
           cep: fornecedor.endereco?.cep || '',
         }
       })
+      setArquivos(fornecedor.arquivos || [])
     } else {
       setFormData({
         nomeFantasia: '',
@@ -108,6 +112,7 @@ export function FornecedorFormDialog({ open, onClose, fornecedor }: FornecedorFo
           cep: '',
         }
       })
+      setArquivos([])
     }
   }, [fornecedor, open])
 
@@ -131,7 +136,8 @@ export function FornecedorFormDialog({ open, onClose, fornecedor }: FornecedorFo
         obs: formData.obs.trim() || undefined,
         endereco: Object.values(formData.endereco).some(v => v.trim())
           ? formData.endereco
-          : undefined
+          : undefined,
+        arquivos: arquivos.length > 0 ? arquivos : undefined
       }
 
       const url = fornecedor 
@@ -382,6 +388,31 @@ export function FornecedorFormDialog({ open, onClose, fornecedor }: FornecedorFo
                 rows={4}
               />
             </div>
+          </div>
+
+          {/* Arquivos */}
+          <div className="space-y-4">
+            <h3 className="font-semibold text-sm text-gray-700 flex items-center gap-2">
+              <FileText className="h-4 w-4" />
+              Documentos e Contratos
+            </h3>
+            
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+              <p className="text-sm text-blue-800">
+                Faça upload de contratos, documentos fiscais (CNPJ), certificados, licenças, etc.
+              </p>
+            </div>
+
+            <FileUpload
+              folder="fornecedores"
+              entityId={fornecedor?.id || 'temp'}
+              existingFiles={arquivos}
+              onFilesChange={setArquivos}
+              maxFiles={10}
+              maxSizeMB={10}
+              acceptedTypes={['application/pdf', 'image/*', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document']}
+              disabled={loading}
+            />
           </div>
 
           {/* Actions */}

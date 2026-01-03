@@ -15,12 +15,14 @@ import { Button } from '@/components/ui/button'
 import Link from 'next/link'
 
 interface AlertsPanelProps {
-  alerts: Alert[]
-  count: AlertsCount
+  alerts?: Alert[]
+  count?: AlertsCount
   onDismiss?: (alertId: string) => void
 }
 
-export function AlertsPanel({ alerts, count, onDismiss }: AlertsPanelProps) {
+export function AlertsPanel({ alerts = [], count, onDismiss }: AlertsPanelProps) {
+  const safeCount = count ?? { total: 0, critical: 0, warning: 0, info: 0 }
+  
   if (alerts.length === 0) {
     return (
       <Card>
@@ -43,28 +45,28 @@ export function AlertsPanel({ alerts, count, onDismiss }: AlertsPanelProps) {
         <CardTitle className="flex items-center justify-between">
           <span>Alertas e Notificações</span>
           <div className="flex gap-2">
-            {count.critical > 0 && (
+            {safeCount.critical > 0 && (
               <Badge variant="destructive" className="gap-1">
                 <AlertTriangle className="h-3 w-3" />
-                {count.critical} crítico{count.critical > 1 ? 's' : ''}
+                {safeCount.critical} crítico{safeCount.critical > 1 ? 's' : ''}
               </Badge>
             )}
-            {count.warning > 0 && (
+            {safeCount.warning > 0 && (
               <Badge variant="warning" className="gap-1 bg-yellow-500 text-white">
                 <AlertCircle className="h-3 w-3" />
-                {count.warning} aviso{count.warning > 1 ? 's' : ''}
+                {safeCount.warning} aviso{safeCount.warning > 1 ? 's' : ''}
               </Badge>
             )}
-            {count.info > 0 && (
+            {safeCount.info > 0 && (
               <Badge variant="secondary" className="gap-1">
                 <Info className="h-3 w-3" />
-                {count.info}
+                {safeCount.info}
               </Badge>
             )}
           </div>
         </CardTitle>
         <CardDescription>
-          {count.total} alerta{count.total > 1 ? 's' : ''} requer{count.total === 1 ? '' : 'em'} atenção
+          {safeCount.total} alerta{safeCount.total > 1 ? 's' : ''} requer{safeCount.total === 1 ? '' : 'em'} atenção
         </CardDescription>
       </CardHeader>
       <CardContent>

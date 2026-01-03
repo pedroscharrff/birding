@@ -71,7 +71,7 @@ export async function PATCH(
       )
     }
 
-    const { nomeFantasia, razaoSocial, tipo, email, telefone, documento, endereco, obs } = body
+    const { nomeFantasia, razaoSocial, tipo, email, telefone, documento, endereco, obs, arquivos } = body
 
     const fornecedor = await prisma.fornecedor.update({
       where: { id },
@@ -84,6 +84,7 @@ export async function PATCH(
         documento: documento !== undefined ? documento || null : existing.documento,
         endereco: endereco !== undefined ? endereco || null : existing.endereco,
         obs: obs !== undefined ? obs || null : existing.obs,
+        arquivos: arquivos !== undefined ? arquivos : existing.arquivos,
       },
     })
 

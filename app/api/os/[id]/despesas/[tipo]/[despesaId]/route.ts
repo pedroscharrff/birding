@@ -5,11 +5,22 @@ import { atualizarStatusPagamentoDespesa } from '@/lib/services/despesas'
 import { logAuditoria } from '@/lib/services/auditoria'
 import { z } from 'zod'
 
+// Schema para arquivo uploadado
+const uploadedFileSchema = z.object({
+  url: z.string(),
+  key: z.string(),
+  fileName: z.string(),
+  contentType: z.string(),
+  size: z.number(),
+  uploadedAt: z.string(),
+})
+
 const updateDespesaSchema = z.object({
   statusPagamento: z.enum(['pendente', 'pago', 'parcial', 'atrasado', 'cancelado']),
   dataPagamento: z.string().optional().nullable(),
   formaPagamento: z.string().optional().nullable(),
   referenciaPagamento: z.string().optional().nullable(),
+  comprovantes: z.array(uploadedFileSchema).optional().nullable(),
 })
 
 /**
@@ -85,6 +96,7 @@ export async function PATCH(
         dataPagamento: validatedData.dataPagamento ? new Date(validatedData.dataPagamento) : null,
         formaPagamento: validatedData.formaPagamento,
         referenciaPagamento: validatedData.referenciaPagamento,
+        comprovantes: validatedData.comprovantes,
       }
     )
 
