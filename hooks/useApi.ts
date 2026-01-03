@@ -85,10 +85,10 @@ export function useApi<T = any>(
   )
 
   useEffect(() => {
-    if (autoFetch && method === 'GET') {
+    if (autoFetch && method === 'GET' && endpoint) {
       fetchData()
     }
-  }, [autoFetch, method, fetchData])
+  }, [autoFetch, method, endpoint, fetchData])
 
   const refetch = useCallback(async () => {
     await fetchData()

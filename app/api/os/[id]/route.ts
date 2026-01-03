@@ -53,6 +53,7 @@ export async function GET(
             preferencias: true,
             idade: true,
             observacoes: true,
+            documentos: true,
             createdAt: true,
           },
           orderBy: {

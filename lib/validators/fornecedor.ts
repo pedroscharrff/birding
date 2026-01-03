@@ -1,5 +1,15 @@
 import { z } from 'zod'
 
+// Schema para arquivo uploadado
+const uploadedFileSchema = z.object({
+  url: z.string(),
+  key: z.string(),
+  fileName: z.string(),
+  contentType: z.string(),
+  size: z.number(),
+  uploadedAt: z.string(),
+})
+
 export const tipoFornecedorEnum = z.enum([
   'hotelaria',
   'guiamento',
@@ -28,6 +38,7 @@ export const createFornecedorSchema = z.object({
   documento: z.string().optional(),
   endereco: enderecoSchema,
   obs: z.string().optional(),
+  arquivos: z.array(uploadedFileSchema).optional(),
 })
 
 export const updateFornecedorSchema = z.object({
@@ -39,6 +50,7 @@ export const updateFornecedorSchema = z.object({
   documento: z.string().optional(),
   endereco: enderecoSchema,
   obs: z.string().optional(),
+  arquivos: z.array(uploadedFileSchema).optional(),
 })
 
 export type CreateFornecedorInput = z.infer<typeof createFornecedorSchema>

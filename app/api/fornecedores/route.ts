@@ -72,7 +72,7 @@ export async function POST(request: NextRequest) {
     const session = await requireAuth()
     const body = await request.json()
 
-    const { nomeFantasia, razaoSocial, tipo, email, telefone, documento, endereco, obs } = body
+    const { nomeFantasia, razaoSocial, tipo, email, telefone, documento, endereco, obs, arquivos } = body
 
     if (!nomeFantasia || !tipo) {
       return NextResponse.json(
@@ -92,6 +92,7 @@ export async function POST(request: NextRequest) {
         documento: documento || null,
         endereco: endereco || null,
         obs: obs || null,
+        arquivos: arquivos || null,
       },
     })
 
