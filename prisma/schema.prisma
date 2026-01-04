@@ -195,11 +195,24 @@ model Usuario {
   roleGlobal  RoleGlobal  @map("role_global")
   hashSenha   String      @map("hash_senha")
   ativo       Boolean     @default(true)
+  
+  // Campos de Permissões e Hierarquia
+  permissoes  Json?       // Objeto com permissões granulares por módulo
+  departamento String?    // Departamento/Setor do usuário
+  cargo       String?     // Cargo do usuário
+  supervisorId String?    @map("supervisor_id") // ID do supervisor direto
+  
+  // Dados adicionais
+  avatar      String?     // URL do avatar
+  ultimoAcesso DateTime?  @map("ultimo_acesso")
+  
   createdAt   DateTime    @default(now()) @map("created_at")
   updatedAt   DateTime    @updatedAt @map("updated_at")
 
   // Relations
   organizacao            Organizacao            @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  supervisor             Usuario?               @relation("UsuarioSupervisor", fields: [supervisorId], references: [id])
+  subordinados           Usuario[]              @relation("UsuarioSupervisor")
   osResponsavel          OS[]                   @relation("OSResponsavel")
   guiaDesignacoes        GuiaDesignacao[]
   motoristaDesignacoes   MotoristaDesignacao[]
@@ -214,6 +227,9 @@ model Usuario {
   @@index([orgId])
   @@index([email])
   @@index([roleGlobal])
+  @@index([ativo])
+  @@index([supervisorId])
+  @@index([departamento])
   @@map("usuarios")
 }
 
