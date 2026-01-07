@@ -93,7 +93,7 @@ export async function POST(
       )
     }
 
-    const { descricao, valor, moeda, unidade, vigenciaInicio, vigenciaFim, observacoes } = body
+    const { descricao, valor, moeda, unidade, vigenciaInicio, vigenciaFim, observacoes, tipoQuarto, regime, quartos } = body
 
     if (!descricao || !valor) {
       return NextResponse.json(
@@ -112,6 +112,9 @@ export async function POST(
         vigenciaInicio: vigenciaInicio ? new Date(vigenciaInicio) : null,
         vigenciaFim: vigenciaFim ? new Date(vigenciaFim) : null,
         observacoes: observacoes || null,
+        tipoQuarto: tipoQuarto || null,
+        regime: regime || null,
+        quartos: quartos || null,
       },
     })
 

@@ -429,6 +429,14 @@ export function OSHospedagensSection({ osId, hospedagens, onUpdate }: OSHospedag
                   onValorChange={(valor, moeda) => {
                     setFormData({ ...formData, custoTotal: valor.toString(), moeda })
                   }}
+                  onTarifaDataChange={(data) => {
+                    setFormData({
+                      ...formData,
+                      tipoQuarto: data.tipoQuarto || formData.tipoQuarto,
+                      regime: data.regime || formData.regime,
+                      quartos: data.quartos?.toString() || formData.quartos,
+                    })
+                  }}
                 />
               )}
               <div className="grid md:grid-cols-2 gap-4">

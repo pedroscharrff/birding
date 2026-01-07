@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { Label } from '@/components/ui/label'
 import { useToast } from '@/hooks/useToast'
-import { DollarSign, Calendar, Info } from 'lucide-react'
+import { DollarSign, Calendar, Info, Building2, Utensils } from 'lucide-react'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 
@@ -17,6 +17,10 @@ interface Tarifa {
   vigenciaFim?: string
   ativo: boolean
   observacoes?: string
+  // Campos específicos de hotelaria
+  tipoQuarto?: string
+  regime?: string
+  quartos?: number
 }
 
 interface TarifaSelectProps {
@@ -25,6 +29,7 @@ interface TarifaSelectProps {
   onChange: (tarifaId: string, tarifa?: Tarifa) => void
   label?: string
   onValorChange?: (valor: number, moeda: string) => void
+  onTarifaDataChange?: (data: { tipoQuarto?: string; regime?: string; quartos?: number }) => void
 }
 
 export function TarifaSelect({
@@ -33,6 +38,7 @@ export function TarifaSelect({
   onChange,
   label = 'Tarifa',
   onValorChange,
+  onTarifaDataChange,
 }: TarifaSelectProps) {
   const [tarifas, setTarifas] = useState<Tarifa[]>([])
   const [loading, setLoading] = useState(false)
@@ -98,6 +104,13 @@ export function TarifaSelect({
     if (tarifa && onValorChange) {
       onValorChange(tarifa.valor, tarifa.moeda)
     }
+    if (tarifa && onTarifaDataChange) {
+      onTarifaDataChange({
+        tipoQuarto: tarifa.tipoQuarto,
+        regime: tarifa.regime,
+        quartos: tarifa.quartos,
+      })
+    }
   }
 
   const formatCurrency = (value: number, moeda: string) => {
@@ -117,6 +130,26 @@ export function TarifaSelect({
     if (inicio && inicio > hoje) return false
     if (fim && fim < hoje) return false
     return true
+  }
+
+  const tipoQuartoLabels: Record<string, string> = {
+    single: 'Single',
+    duplo: 'Duplo',
+    duplo_solteiro: 'Duplo (2 camas de solteiro)',
+    triplo: 'Triplo',
+    quadruplo: 'Quádruplo',
+    suite: 'Suíte',
+    suite_master: 'Suíte Master',
+    chalé: 'Chalé',
+    apartamento: 'Apartamento',
+  }
+
+  const regimeLabels: Record<string, string> = {
+    sem_cafe: 'Sem Café',
+    cafe: 'Café da Manhã',
+    meia_pensao: 'Meia Pensão',
+    pensao_completa: 'Pensão Completa',
+    all_inclusive: 'All Inclusive',
   }
 
   if (!fornecedorId) {
@@ -156,6 +189,21 @@ export function TarifaSelect({
                   {selectedTarifa.unidade && ` ${selectedTarifa.unidade}`}
                 </span>
               </div>
+              {selectedTarifa.tipoQuarto && (
+                <div className="flex items-center gap-2 mt-1 text-blue-700">
+                  <Building2 className="h-3.5 w-3.5" />
+                  <span>
+                    {tipoQuartoLabels[selectedTarifa.tipoQuarto] || selectedTarifa.tipoQuarto}
+                    {selectedTarifa.quartos && ` • ${selectedTarifa.quartos} ${selectedTarifa.quartos === 1 ? 'quarto' : 'quartos'}`}
+                  </span>
+                </div>
+              )}
+              {selectedTarifa.regime && (
+                <div className="flex items-center gap-2 mt-1 text-blue-700">
+                  <Utensils className="h-3.5 w-3.5" />
+                  <span>{regimeLabels[selectedTarifa.regime] || selectedTarifa.regime}</span>
+                </div>
+              )}
               {(selectedTarifa.vigenciaInicio || selectedTarifa.vigenciaFim) && (
                 <div className="flex items-center gap-2 mt-1 text-blue-600 text-xs">
                   <Calendar className="h-3.5 w-3.5" />
