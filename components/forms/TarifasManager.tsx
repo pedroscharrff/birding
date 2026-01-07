@@ -2,11 +2,10 @@
 
 import { useState, useEffect } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { useToast } from '@/hooks/useToast'
+import { TarifaFormDialog } from '@/components/forms/TarifaFormDialog'
 import { 
   DollarSign, 
   Plus, 
@@ -15,7 +14,9 @@ import {
   Calendar,
   X,
   Check,
-  AlertCircle
+  AlertCircle,
+  Building2,
+  Utensils
 } from 'lucide-react'
 
 interface Tarifa {
@@ -28,6 +29,14 @@ interface Tarifa {
   vigenciaFim?: string | null
   ativo: boolean
   observacoes?: string | null
+  tipoQuarto?: string | null
+  regime?: string | null
+  quartos?: number | null
+}
+
+interface Fornecedor {
+  id: string
+  tipo: string
 }
 
 interface TarifasManagerProps {
@@ -37,23 +46,30 @@ interface TarifasManagerProps {
 export function TarifasManager({ fornecedorId }: TarifasManagerProps) {
   const { toast } = useToast()
   const [tarifas, setTarifas] = useState<Tarifa[]>([])
+  const [fornecedor, setFornecedor] = useState<Fornecedor | null>(null)
   const [loading, setLoading] = useState(true)
-  const [editingId, setEditingId] = useState<string | null>(null)
-  const [showForm, setShowForm] = useState(false)
-  
-  const [formData, setFormData] = useState({
-    descricao: '',
-    valor: '',
-    moeda: 'BRL',
-    unidade: '',
-    vigenciaInicio: '',
-    vigenciaFim: '',
-    observacoes: '',
-  })
+  const [dialogOpen, setDialogOpen] = useState(false)
+  const [editingTarifa, setEditingTarifa] = useState<Tarifa | null>(null)
 
   useEffect(() => {
+    loadFornecedor()
     loadTarifas()
   }, [fornecedorId])
+
+  const loadFornecedor = async () => {
+    try {
+      const res = await fetch(`/api/fornecedores/${fornecedorId}`, {
+        credentials: 'include',
+      })
+      const data = await res.json()
+      
+      if (data.success) {
+        setFornecedor(data.data)
+      }
+    } catch (error) {
+      console.error('Erro ao carregar fornecedor:', error)
+    }
+  }
 
   const loadTarifas = async () => {
     try {
@@ -73,72 +89,20 @@ export function TarifasManager({ fornecedorId }: TarifasManagerProps) {
     }
   }
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    
-    if (!formData.descricao.trim() || !formData.valor) {
-      toast({ title: 'Atenção', description: 'Descrição e valor são obrigatórios', variant: 'destructive' })
-      return
-    }
-
-    try {
-      const payload = {
-        descricao: formData.descricao.trim(),
-        valor: parseFloat(formData.valor),
-        moeda: formData.moeda,
-        unidade: formData.unidade.trim() || undefined,
-        vigenciaInicio: formData.vigenciaInicio || undefined,
-        vigenciaFim: formData.vigenciaFim || undefined,
-        observacoes: formData.observacoes.trim() || undefined,
-      }
-
-      const url = editingId
-        ? `/api/fornecedores/${fornecedorId}/tarifas/${editingId}`
-        : `/api/fornecedores/${fornecedorId}/tarifas`
-      
-      const method = editingId ? 'PATCH' : 'POST'
-      
-      const res = await fetch(url, {
-        method,
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify(payload)
-      })
-      
-      const data = await res.json()
-      
-      if (!res.ok || !data.success) {
-        throw new Error(data.error || 'Erro ao salvar tarifa')
-      }
-      
-      toast({ 
-        title: 'Sucesso', 
-        description: editingId ? 'Tarifa atualizada!' : 'Tarifa criada com sucesso!' 
-      })
-      
-      resetForm()
-      loadTarifas()
-    } catch (error: any) {
-      toast({ 
-        title: 'Erro', 
-        description: error.message || 'Erro ao salvar tarifa', 
-        variant: 'destructive' 
-      })
-    }
+  const handleEdit = (tarifa: Tarifa) => {
+    setEditingTarifa(tarifa)
+    setDialogOpen(true)
   }
 
-  const handleEdit = (tarifa: Tarifa) => {
-    setEditingId(tarifa.id)
-    setFormData({
-      descricao: tarifa.descricao,
-      valor: tarifa.valor.toString(),
-      moeda: tarifa.moeda,
-      unidade: tarifa.unidade || '',
-      vigenciaInicio: tarifa.vigenciaInicio ? tarifa.vigenciaInicio.split('T')[0] : '',
-      vigenciaFim: tarifa.vigenciaFim ? tarifa.vigenciaFim.split('T')[0] : '',
-      observacoes: tarifa.observacoes || '',
-    })
-    setShowForm(true)
+  const handleNewTarifa = () => {
+    setEditingTarifa(null)
+    setDialogOpen(true)
+  }
+
+  const handleDialogClose = () => {
+    setDialogOpen(false)
+    setEditingTarifa(null)
+    loadTarifas()
   }
 
   const handleDelete = async (id: string) => {
@@ -184,20 +148,6 @@ export function TarifasManager({ fornecedorId }: TarifasManagerProps) {
     }
   }
 
-  const resetForm = () => {
-    setFormData({
-      descricao: '',
-      valor: '',
-      moeda: 'BRL',
-      unidade: '',
-      vigenciaInicio: '',
-      vigenciaFim: '',
-      observacoes: '',
-    })
-    setEditingId(null)
-    setShowForm(false)
-  }
-
   const formatCurrency = (valor: number, moeda: string) => {
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
@@ -226,6 +176,26 @@ export function TarifasManager({ fornecedorId }: TarifasManagerProps) {
     return true
   }
 
+  const tipoQuartoLabels: Record<string, string> = {
+    single: 'Single',
+    duplo: 'Duplo',
+    duplo_solteiro: 'Duplo (2 camas)',
+    triplo: 'Triplo',
+    quadruplo: 'Quádruplo',
+    suite: 'Suíte',
+    suite_master: 'Suíte Master',
+    chalé: 'Chalé',
+    apartamento: 'Apartamento',
+  }
+
+  const regimeLabels: Record<string, string> = {
+    sem_cafe: 'Sem Café',
+    cafe: 'Café da Manhã',
+    meia_pensao: 'Meia Pensão',
+    pensao_completa: 'Pensão Completa',
+    all_inclusive: 'All Inclusive',
+  }
+
   return (
     <Card>
       <CardHeader>
@@ -238,120 +208,15 @@ export function TarifasManager({ fornecedorId }: TarifasManagerProps) {
             <CardDescription>Gerencie os valores e tarifas deste fornecedor</CardDescription>
           </div>
           <Button
-            onClick={() => setShowForm(!showForm)}
+            onClick={handleNewTarifa}
             size="sm"
-            variant={showForm ? 'outline' : 'default'}
           >
-            {showForm ? (
-              <>
-                <X className="h-4 w-4 mr-2" />
-                Cancelar
-              </>
-            ) : (
-              <>
-                <Plus className="h-4 w-4 mr-2" />
-                Nova Tarifa
-              </>
-            )}
+            <Plus className="h-4 w-4 mr-2" />
+            Nova Tarifa
           </Button>
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
-        {/* Formulário */}
-        {showForm && (
-          <form onSubmit={handleSubmit} className="space-y-4 p-4 border rounded-lg bg-gray-50">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="md:col-span-2 space-y-2">
-                <Label htmlFor="descricao">Descrição *</Label>
-                <Input
-                  id="descricao"
-                  value={formData.descricao}
-                  onChange={(e) => setFormData(prev => ({ ...prev, descricao: e.target.value }))}
-                  placeholder="Ex: Diária quarto duplo, Guiamento por dia"
-                  required
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="valor">Valor *</Label>
-                <Input
-                  id="valor"
-                  type="number"
-                  step="0.01"
-                  value={formData.valor}
-                  onChange={(e) => setFormData(prev => ({ ...prev, valor: e.target.value }))}
-                  placeholder="0.00"
-                  required
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="moeda">Moeda</Label>
-                <select
-                  id="moeda"
-                  value={formData.moeda}
-                  onChange={(e) => setFormData(prev => ({ ...prev, moeda: e.target.value }))}
-                  className="w-full border rounded-md h-10 px-3 bg-white"
-                >
-                  <option value="BRL">BRL - Real</option>
-                  <option value="USD">USD - Dólar</option>
-                  <option value="EUR">EUR - Euro</option>
-                </select>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="unidade">Unidade</Label>
-                <Input
-                  id="unidade"
-                  value={formData.unidade}
-                  onChange={(e) => setFormData(prev => ({ ...prev, unidade: e.target.value }))}
-                  placeholder="Ex: por pessoa, por dia, por km"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="vigenciaInicio">Vigência Início</Label>
-                <Input
-                  id="vigenciaInicio"
-                  type="date"
-                  value={formData.vigenciaInicio}
-                  onChange={(e) => setFormData(prev => ({ ...prev, vigenciaInicio: e.target.value }))}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="vigenciaFim">Vigência Fim</Label>
-                <Input
-                  id="vigenciaFim"
-                  type="date"
-                  value={formData.vigenciaFim}
-                  onChange={(e) => setFormData(prev => ({ ...prev, vigenciaFim: e.target.value }))}
-                />
-              </div>
-
-              <div className="md:col-span-2 space-y-2">
-                <Label htmlFor="observacoes">Observações</Label>
-                <Input
-                  id="observacoes"
-                  value={formData.observacoes}
-                  onChange={(e) => setFormData(prev => ({ ...prev, observacoes: e.target.value }))}
-                  placeholder="Informações adicionais sobre esta tarifa"
-                />
-              </div>
-            </div>
-
-            <div className="flex gap-2">
-              <Button type="submit" className="flex-1">
-                <Check className="h-4 w-4 mr-2" />
-                {editingId ? 'Atualizar Tarifa' : 'Criar Tarifa'}
-              </Button>
-              <Button type="button" variant="outline" onClick={resetForm}>
-                Cancelar
-              </Button>
-            </div>
-          </form>
-        )}
-
         {/* Lista de Tarifas */}
         {loading ? (
           <div className="text-center py-8 text-gray-500">Carregando tarifas...</div>
@@ -409,6 +274,29 @@ export function TarifasManager({ fornecedorId }: TarifasManagerProps) {
                           </span>
                         )}
                       </div>
+
+                      {/* Informações de Hotelaria */}
+                      {(tarifa.tipoQuarto || tarifa.regime || tarifa.quartos) && (
+                        <div className="flex flex-wrap items-center gap-3 text-sm mt-2">
+                          {tarifa.tipoQuarto && (
+                            <span className="flex items-center gap-1 text-blue-700 bg-blue-50 px-2 py-0.5 rounded">
+                              <Building2 className="h-3 w-3" />
+                              {tipoQuartoLabels[tarifa.tipoQuarto] || tarifa.tipoQuarto}
+                            </span>
+                          )}
+                          {tarifa.regime && (
+                            <span className="flex items-center gap-1 text-green-700 bg-green-50 px-2 py-0.5 rounded">
+                              <Utensils className="h-3 w-3" />
+                              {regimeLabels[tarifa.regime] || tarifa.regime}
+                            </span>
+                          )}
+                          {tarifa.quartos && (
+                            <span className="text-gray-600">
+                              {tarifa.quartos} {tarifa.quartos === 1 ? 'quarto' : 'quartos'}
+                            </span>
+                          )}
+                        </div>
+                      )}
                       
                       {tarifa.observacoes && (
                         <p className="text-sm text-gray-500 mt-2">{tarifa.observacoes}</p>
@@ -453,6 +341,18 @@ export function TarifasManager({ fornecedorId }: TarifasManagerProps) {
           </div>
         )}
       </CardContent>
+
+      {/* Dialog de Tarifa */}
+      {fornecedor && (
+        <TarifaFormDialog
+          open={dialogOpen}
+          onClose={handleDialogClose}
+          fornecedorId={fornecedorId}
+          fornecedorTipo={fornecedor.tipo}
+          tarifa={editingTarifa}
+          onSuccess={loadTarifas}
+        />
+      )}
     </Card>
   )
 }

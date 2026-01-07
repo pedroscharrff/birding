@@ -42,7 +42,7 @@ export async function PATCH(
       )
     }
 
-    const { descricao, valor, moeda, unidade, vigenciaInicio, vigenciaFim, ativo, observacoes } = body
+    const { descricao, valor, moeda, unidade, vigenciaInicio, vigenciaFim, ativo, observacoes, tipoQuarto, regime, quartos } = body
 
     const tarifa = await prisma.fornecedorTarifa.update({
       where: { id: tarifaId },
@@ -55,6 +55,9 @@ export async function PATCH(
         vigenciaFim: vigenciaFim !== undefined ? (vigenciaFim ? new Date(vigenciaFim) : null) : existing.vigenciaFim,
         ativo: ativo !== undefined ? ativo : existing.ativo,
         observacoes: observacoes !== undefined ? observacoes || null : existing.observacoes,
+        tipoQuarto: tipoQuarto !== undefined ? tipoQuarto || null : (existing as any).tipoQuarto,
+        regime: regime !== undefined ? regime || null : (existing as any).regime,
+        quartos: quartos !== undefined ? quartos || null : (existing as any).quartos,
       },
     })
 
