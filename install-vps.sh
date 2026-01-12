@@ -460,9 +460,104 @@ print_success "PM2 configurado"
 # CONFIGURAR NGINX
 # ============================================
 
-print_header "13. Configurando Nginx"
+print_header "13. Configurando Nginx (HTTP temporário)"
 
+# Primeiro: configuração HTTP apenas para validação SSL
 cat > /etc/nginx/sites-available/ostour << 'NGINXEOF'
+upstream nextjs_app {
+    server 127.0.0.1:3000;
+    keepalive 64;
+}
+
+upstream minio_console {
+    server 127.0.0.1:9001;
+    keepalive 64;
+}
+
+upstream minio_api {
+    server 127.0.0.1:9000;
+    keepalive 64;
+}
+
+server {
+    listen 80;
+    listen [::]:80;
+    server_name DOMAIN_PLACEHOLDER www.DOMAIN_PLACEHOLDER;
+    
+    access_log /var/log/nginx/ostour_access.log;
+    error_log /var/log/nginx/ostour_error.log;
+    
+    client_max_body_size 100M;
+    
+    # Permitir validação SSL
+    location /.well-known/acme-challenge/ {
+        root /var/www/html;
+    }
+    
+    # Proxy para aplicação
+    location / {
+        proxy_pass http://nextjs_app;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_cache_bypass $http_upgrade;
+    }
+}
+NGINXEOF
+
+# Substituir placeholder pelo domínio real
+sed -i "s/DOMAIN_PLACEHOLDER/$DOMAIN/g" /etc/nginx/sites-available/ostour
+
+# Ativar site
+ln -sf /etc/nginx/sites-available/ostour /etc/nginx/sites-enabled/
+rm -f /etc/nginx/sites-enabled/default
+
+# Testar e recarregar nginx
+nginx -t && systemctl reload nginx
+print_success "Nginx configurado (HTTP)"
+
+# ============================================
+# CONFIGURAR SSL
+# ============================================
+
+print_header "14. Obtendo Certificado SSL"
+
+# Criar diretório para validação
+mkdir -p /var/www/html/.well-known/acme-challenge
+
+# Obter certificado SSL
+print_info "Obtendo certificado SSL do Let's Encrypt..."
+certbot certonly --webroot -w /var/www/html -d $DOMAIN -d www.$DOMAIN --non-interactive --agree-tos --email $SSL_EMAIL
+
+if [ $? -eq 0 ]; then
+    print_success "Certificado SSL obtido com sucesso"
+else
+    print_error "Falha ao obter certificado SSL"
+    print_warning "Verifique se o domínio $DOMAIN está apontando para este servidor"
+    print_info "Você pode continuar com HTTP ou tentar novamente mais tarde com: certbot certonly --webroot -w /var/www/html -d $DOMAIN -d www.$DOMAIN"
+    read -p "Deseja continuar sem SSL? (s/n): " -n 1 -r
+    echo
+    if [[ ! $REPLY =~ ^[Ss]$ ]]; then
+        exit 1
+    fi
+    print_warning "Continuando sem SSL - aplicação acessível via HTTP"
+fi
+
+# ============================================
+# CONFIGURAR NGINX COM SSL
+# ============================================
+
+print_header "15. Configurando Nginx com SSL"
+
+# Verificar se certificados existem
+if [ -f "/etc/letsencrypt/live/$DOMAIN/fullchain.pem" ]; then
+    print_info "Configurando Nginx com HTTPS..."
+    
+    cat > /etc/nginx/sites-available/ostour << 'NGINXEOF'
 upstream nextjs_app {
     server 127.0.0.1:3000;
     keepalive 64;
@@ -569,39 +664,26 @@ server {
 }
 NGINXEOF
 
-# Substituir placeholder pelo domínio real
-sed -i "s/DOMAIN_PLACEHOLDER/$DOMAIN/g" /etc/nginx/sites-available/ostour
-
-# Ativar site
-ln -sf /etc/nginx/sites-available/ostour /etc/nginx/sites-enabled/
-rm -f /etc/nginx/sites-enabled/default
-
-print_success "Nginx configurado"
-
-# ============================================
-# CONFIGURAR SSL
-# ============================================
-
-print_header "14. Configurando SSL (Let's Encrypt)"
-
-# Testar nginx antes de obter certificado
-nginx -t
-
-# Obter certificado SSL
-print_info "Obtendo certificado SSL..."
-certbot --nginx -d $DOMAIN -d www.$DOMAIN --non-interactive --agree-tos --email $SSL_EMAIL --redirect
-
-print_success "Certificado SSL configurado"
-
-# Recarregar nginx
-systemctl reload nginx
-print_success "Nginx recarregado"
+    # Substituir placeholder pelo domínio real
+    sed -i "s/DOMAIN_PLACEHOLDER/$DOMAIN/g" /etc/nginx/sites-available/ostour
+    
+    # Testar e recarregar nginx
+    nginx -t && systemctl reload nginx
+    print_success "Nginx configurado com SSL"
+    
+    # Configurar renovação automática
+    print_info "Configurando renovação automática de certificados..."
+    (crontab -l 2>/dev/null | grep -v certbot; echo "0 3 * * * certbot renew --quiet --post-hook 'systemctl reload nginx'") | crontab -
+    print_success "Renovação automática configurada"
+else
+    print_warning "Certificados SSL não encontrados - mantendo configuração HTTP"
+fi
 
 # ============================================
 # CONFIGURAR FIREWALL
 # ============================================
 
-print_header "15. Configurando Firewall"
+print_header "16. Configurando Firewall"
 
 ufw --force enable
 ufw allow 22/tcp
@@ -615,7 +697,7 @@ print_success "Firewall configurado"
 # CONFIGURAR BACKUPS
 # ============================================
 
-print_header "16. Configurando Backups Automáticos"
+print_header "17. Configurando Backups Automáticos"
 
 mkdir -p /home/ostour/backups
 chown ostour:ostour /home/ostour/backups
@@ -663,7 +745,7 @@ print_success "Backups automáticos configurados (diariamente às 2h)"
 # CRIAR USUÁRIO ADMIN
 # ============================================
 
-print_header "17. Criar Usuário Administrador"
+print_header "18. Criar Usuário Administrador"
 
 read -p "Deseja criar um usuário admin agora? (s/n): " -n 1 -r
 echo
