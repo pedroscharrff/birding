@@ -112,12 +112,37 @@ done
 print_success "Senha do MinIO configurada"
 
 # URL do repositório Git
-read -p "Digite a URL do repositório Git: " GIT_REPO
+echo ""
+print_info "Para repositórios públicos, use HTTPS: https://github.com/usuario/repo.git"
+print_info "Para repositórios privados, você precisará de um Personal Access Token"
+read -p "Digite a URL do repositório Git (HTTPS): " GIT_REPO
 while [ -z "$GIT_REPO" ]; do
     print_warning "URL do repositório é obrigatória!"
     read -p "Digite a URL do repositório: " GIT_REPO
 done
-print_success "Repositório: $GIT_REPO"
+
+# Converter SSH para HTTPS se necessário
+if [[ $GIT_REPO == git@github.com:* ]]; then
+    print_warning "URL SSH detectada, convertendo para HTTPS..."
+    GIT_REPO=$(echo $GIT_REPO | sed 's/git@github.com:/https:\/\/github.com\//')
+    print_info "Nova URL: $GIT_REPO"
+fi
+
+# Verificar se é repositório privado
+read -p "O repositório é privado? (s/n): " -n 1 -r
+echo
+if [[ $REPLY =~ ^[Ss]$ ]]; then
+    print_info "Para repositórios privados, você precisa de um Personal Access Token"
+    print_info "Crie um em: https://github.com/settings/tokens (classic token com repo access)"
+    read -p "Digite seu GitHub username: " GIT_USERNAME
+    read -sp "Digite seu Personal Access Token: " GIT_TOKEN
+    echo
+    # Inserir credenciais na URL
+    GIT_REPO=$(echo $GIT_REPO | sed "s|https://|https://${GIT_USERNAME}:${GIT_TOKEN}@|")
+    print_success "Credenciais configuradas"
+fi
+
+print_success "Repositório: $(echo $GIT_REPO | sed 's/:.*@/@/')"  # Ocultar token no output
 
 # Branch
 read -p "Digite o branch (padrão: main): " GIT_BRANCH
@@ -300,17 +325,37 @@ fi
 # ============================================
 
 print_header "10. Clonando Repositório"
-sudo -u ostour bash << EOF
+
+# Remover diretório se existir e estiver vazio ou corrompido
+if [ -d "/home/ostour/birding" ] && [ ! -d "/home/ostour/birding/.git" ]; then
+    print_warning "Removendo diretório birding incompleto..."
+    rm -rf /home/ostour/birding
+fi
+
+# Clonar ou atualizar repositório
+if sudo -u ostour bash << EOF
 cd /home/ostour
-if [ -d "birding" ]; then
-    echo "Diretório já existe, fazendo pull..."
+if [ -d "birding/.git" ]; then
+    echo "Repositório já existe, atualizando..."
     cd birding
+    git fetch origin
+    git checkout $GIT_BRANCH
     git pull origin $GIT_BRANCH
 else
+    echo "Clonando repositório..."
     git clone -b $GIT_BRANCH $GIT_REPO birding
 fi
 EOF
-print_success "Repositório clonado"
+then
+    print_success "Repositório clonado/atualizado com sucesso"
+else
+    print_error "Falha ao clonar repositório!"
+    print_info "Verifique:"
+    print_info "  1. A URL está correta (use HTTPS, não SSH)"
+    print_info "  2. Se privado, o token tem permissão 'repo'"
+    print_info "  3. O branch '$GIT_BRANCH' existe"
+    exit 1
+fi
 
 # ============================================
 # CONFIGURAR APLICAÇÃO
