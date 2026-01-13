@@ -54,14 +54,31 @@ routeFiles.forEach(file => {
       return;
     }
 
-    // Encontrar a primeira linha de import
     const lines = content.split('\n');
     let lastImportIndex = -1;
+    let inMultiLineImport = false;
     
+    // Encontrar o final de todos os imports (incluindo multi-linha)
     for (let i = 0; i < lines.length; i++) {
-      if (lines[i].trim().startsWith('import ')) {
+      const trimmed = lines[i].trim();
+      
+      // Detectar início de import
+      if (trimmed.startsWith('import ')) {
         lastImportIndex = i;
-      } else if (lastImportIndex !== -1 && lines[i].trim() !== '' && !lines[i].trim().startsWith('import')) {
+        // Verificar se é import multi-linha (tem { mas não tem })
+        if (trimmed.includes('{') && !trimmed.includes('}')) {
+          inMultiLineImport = true;
+        }
+      } 
+      // Se estamos em import multi-linha, continuar até encontrar }
+      else if (inMultiLineImport) {
+        lastImportIndex = i;
+        if (trimmed.includes('}')) {
+          inMultiLineImport = false;
+        }
+      }
+      // Se não é import e não estamos em multi-linha, paramos
+      else if (lastImportIndex !== -1 && trimmed !== '' && !trimmed.startsWith('//')) {
         break;
       }
     }
@@ -72,7 +89,7 @@ routeFiles.forEach(file => {
       return;
     }
 
-    // Adicionar export const dynamic após os imports
+    // Adicionar export const dynamic após todos os imports
     lines.splice(lastImportIndex + 1, 0, '', 'export const dynamic = \'force-dynamic\'');
     
     const newContent = lines.join('\n');

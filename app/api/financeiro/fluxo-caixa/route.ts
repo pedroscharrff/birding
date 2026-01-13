@@ -8,6 +8,8 @@ import {
   setFluxoCaixaCache 
 } from '@/lib/cache/financeiro-cache'
 
+export const dynamic = 'force-dynamic'
+
 /**
  * GET /api/financeiro/fluxo-caixa - Fluxo de caixa mensal
  * Otimizado com cache

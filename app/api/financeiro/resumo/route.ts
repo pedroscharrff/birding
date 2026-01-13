@@ -7,6 +7,8 @@ import {
   setResumoFinanceiroCache 
 } from '@/lib/cache/financeiro-cache'
 
+export const dynamic = 'force-dynamic'
+
 /**
  * GET /api/financeiro/resumo - Resumo financeiro geral da empresa
  * Otimizado com cache e queries paralelas

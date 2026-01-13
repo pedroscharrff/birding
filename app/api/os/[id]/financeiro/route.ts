@@ -10,6 +10,8 @@ import { logAuditoria } from '@/lib/services/auditoria'
 import { z } from 'zod'
 import { Decimal } from '@prisma/client/runtime/library'
 
+export const dynamic = 'force-dynamic'
+
 const updateFinanceiroSchema = z.object({
   valorVenda: z.number().optional(),
   moedaVenda: z.enum(['BRL', 'USD', 'EUR']).optional(),
