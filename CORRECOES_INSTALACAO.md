@@ -55,13 +55,23 @@ const nextConfig = {
 ```
 
 #### B. Marcação de Rotas Dinâmicas
-Criado script `scripts/fix-dynamic-routes.js` que adiciona automaticamente:
+Criado script `scripts/fix-all-dynamic-routes.js` que:
+- Detecta automaticamente todas as rotas da API
+- Identifica corretamente imports multi-linha
+- Remove exports dinâmicos mal posicionados
+- Adiciona `export const dynamic = 'force-dynamic'` no local correto
 
 ```typescript
 export const dynamic = 'force-dynamic'
 ```
 
-Em todas as rotas da API que usam recursos dinâmicos.
+**Importante:** O script lida corretamente com imports multi-linha como:
+```typescript
+import {
+  funcao1,
+  funcao2
+} from '@/lib/modulo'
+```
 
 #### C. Integração no Script de Instalação
 O script agora executa automaticamente a correção antes do build:
@@ -75,13 +85,43 @@ fi
 
 ---
 
-### 3. ✅ Melhorias no Processo de Build
+### 3. ❌ Erro de Imports Multi-linha
+
+**Problema:**
+```
+Error: cannot import as reserved word
+import { 
+
+export const dynamic = 'force-dynamic'
+  getFluxoCaixaCache, 
+  setFluxoCaixaCache 
+} from '@/lib/cache/financeiro-cache'
+```
+
+**Causa:** O script `fix-dynamic-routes.js` estava inserindo `export const dynamic` no meio de imports multi-linha, quebrando a sintaxe.
+
+**Solução:**
+Criado novo script `fix-all-dynamic-routes.js` que:
+- Detecta corretamente imports multi-linha (que começam com `{` mas não terminam com `}`)
+- Rastreia o estado `inMultiLineImport` até encontrar o `}`
+- Remove qualquer `export const dynamic` mal posicionado
+- Adiciona a declaração no local correto após **todos** os imports
+
+**Arquivos corrigidos manualmente:**
+- ✅ `app/api/financeiro/fluxo-caixa/route.ts`
+- ✅ `app/api/financeiro/resumo/route.ts`
+- ✅ `app/api/os/[id]/financeiro/route.ts`
+
+---
+
+### 4. ✅ Melhorias no Processo de Build
 
 **Adicionado:**
 - Validação de cada etapa do build (npm install, prisma generate, migrations, build)
 - Mensagens de erro detalhadas com emojis
 - Exit codes apropriados para falhas
 - Backup automático do `next.config.js` antes de modificações
+- Script melhorado que detecta e corrige automaticamente todas as rotas
 
 ```bash
 if [ $? -ne 0 ]; then

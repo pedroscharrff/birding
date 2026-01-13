@@ -450,12 +450,14 @@ if [ $? -ne 0 ]; then
     exit 1
 fi
 
-echo "� Corrigindo rotas dinâmicas da API..."
-if [ -f scripts/fix-dynamic-routes.js ]; then
+echo "🔄 Corrigindo rotas dinâmicas da API..."
+if [ -f scripts/fix-all-dynamic-routes.js ]; then
+    node scripts/fix-all-dynamic-routes.js
+elif [ -f scripts/fix-dynamic-routes.js ]; then
     node scripts/fix-dynamic-routes.js
 fi
 
-echo "�🗄️ Executando migrations..."
+echo "�️ Executando migrations..."
 npx prisma migrate deploy
 
 if [ $? -ne 0 ]; then
