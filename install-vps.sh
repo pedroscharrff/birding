@@ -434,12 +434,23 @@ print_info "Instalando dependências (isso pode demorar)..."
 if sudo -u ostour bash << 'EOF'
 cd /home/ostour/birding
 
+# Limpar cache e builds anteriores
+echo "🧹 Limpando cache e builds anteriores..."
+rm -rf .next
+rm -rf node_modules/.cache
+rm -rf tsconfig.tsbuildinfo
+
 echo "📦 Instalando dependências..."
-npm install --production=false
+npm ci --production=false
 
 if [ $? -ne 0 ]; then
     echo "❌ Erro ao instalar dependências"
-    exit 1
+    echo "Tentando com npm install..."
+    npm install --production=false
+    if [ $? -ne 0 ]; then
+        echo "❌ Erro fatal ao instalar dependências"
+        exit 1
+    fi
 fi
 
 echo "🔧 Gerando Prisma Client..."
@@ -450,13 +461,6 @@ if [ $? -ne 0 ]; then
     exit 1
 fi
 
-echo "🔄 Corrigindo rotas dinâmicas da API..."
-if [ -f scripts/fix-all-dynamic-routes.js ]; then
-    node scripts/fix-all-dynamic-routes.js
-elif [ -f scripts/fix-dynamic-routes.js ]; then
-    node scripts/fix-dynamic-routes.js
-fi
-
 echo "�️ Executando migrations..."
 npx prisma migrate deploy
 
@@ -465,11 +469,34 @@ if [ $? -ne 0 ]; then
     exit 1
 fi
 
+echo "�🔄 Corrigindo rotas dinâmicas da API..."
+if [ -f scripts/fix-all-dynamic-routes.js ]; then
+    node scripts/fix-all-dynamic-routes.js
+    if [ $? -ne 0 ]; then
+        echo "⚠️  Aviso: Erro ao corrigir rotas dinâmicas automaticamente"
+        echo "Continuando com build..."
+    fi
+elif [ -f scripts/fix-dynamic-routes.js ]; then
+    node scripts/fix-dynamic-routes.js
+fi
+
+# Verificar se todas as rotas têm export const dynamic
+echo "🔍 Verificando rotas dinâmicas..."
+ROUTES_WITHOUT_DYNAMIC=$(find app/api -name "route.ts" -type f -exec grep -L "export const dynamic" {} \; 2>/dev/null | wc -l)
+if [ $ROUTES_WITHOUT_DYNAMIC -gt 0 ]; then
+    echo "⚠️  Aviso: $ROUTES_WITHOUT_DYNAMIC rotas sem 'export const dynamic'"
+    echo "Isso pode causar erros de build. Listando rotas:"
+    find app/api -name "route.ts" -type f -exec grep -L "export const dynamic" {} \; 2>/dev/null | head -10
+fi
+
 echo "🏗️ Buildando aplicação..."
-NODE_ENV=production npm run build
+NODE_ENV=production npm run build 2>&1 | tee /tmp/build.log
 
 if [ $? -ne 0 ]; then
     echo "❌ Erro ao buildar aplicação"
+    echo ""
+    echo "Últimas 30 linhas do log de build:"
+    tail -30 /tmp/build.log
     exit 1
 fi
 
@@ -480,10 +507,19 @@ then
 else
     print_error "Falha no build da aplicação"
     print_info "Verifique os logs acima para detalhes do erro"
-    print_info "Erros comuns:"
-    print_info "  - Rotas dinâmicas sem generateStaticParams"
-    print_info "  - Uso de cookies/headers em rotas que tentam ser estáticas"
-    print_info "  - Dependências faltando"
+    print_info ""
+    print_info "Erros comuns e soluções:"
+    print_info "  1. Rotas dinâmicas sem 'export const dynamic = force-dynamic'"
+    print_info "     → Execute: node scripts/fix-all-dynamic-routes.js"
+    print_info ""
+    print_info "  2. Erro de memória (JavaScript heap out of memory)"
+    print_info "     → Execute: NODE_OPTIONS='--max-old-space-size=4096' npm run build"
+    print_info ""
+    print_info "  3. Dependências faltando ou incompatíveis"
+    print_info "     → Execute: rm -rf node_modules package-lock.json && npm install"
+    print_info ""
+    print_info "  4. Prisma Client desatualizado"
+    print_info "     → Execute: npx prisma generate"
     exit 1
 fi
 

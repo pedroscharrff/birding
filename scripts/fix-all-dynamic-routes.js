@@ -2,36 +2,40 @@
 
 const fs = require('fs');
 const path = require('path');
-const { execSync } = require('child_process');
 
 console.log('🔍 Procurando todas as rotas da API...\n');
 
-// Encontrar todos os arquivos route.ts na pasta app/api
+// Encontrar todos os arquivos route.ts na pasta app/api (funciona em Windows e Linux)
 const findRouteFiles = () => {
-  try {
-    const output = execSync('find app/api -name "route.ts" -type f', { 
-      cwd: process.cwd(),
-      encoding: 'utf8' 
-    });
-    return output.trim().split('\n').filter(f => f);
-  } catch (error) {
-    // Fallback para Windows
-    const routes = [];
-    const walkSync = (dir) => {
+  const routes = [];
+  const walkSync = (dir) => {
+    try {
+      if (!fs.existsSync(dir)) {
+        console.warn(`⚠️  Diretório não encontrado: ${dir}`);
+        return;
+      }
+      
       const files = fs.readdirSync(dir);
       files.forEach(file => {
         const filePath = path.join(dir, file);
-        const stat = fs.statSync(filePath);
-        if (stat.isDirectory()) {
-          walkSync(filePath);
-        } else if (file === 'route.ts') {
-          routes.push(filePath.replace(/\\/g, '/'));
+        try {
+          const stat = fs.statSync(filePath);
+          if (stat.isDirectory()) {
+            walkSync(filePath);
+          } else if (file === 'route.ts') {
+            routes.push(filePath.replace(/\\/g, '/'));
+          }
+        } catch (err) {
+          console.warn(`⚠️  Erro ao acessar: ${filePath}`);
         }
       });
-    };
-    walkSync('app/api');
-    return routes;
-  }
+    } catch (err) {
+      console.error(`❌ Erro ao ler diretório ${dir}:`, err.message);
+    }
+  };
+  
+  walkSync('app/api');
+  return routes;
 };
 
 const routeFiles = findRouteFiles();
