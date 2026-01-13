@@ -2,6 +2,40 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db/prisma'
 import { requireAuth } from '@/lib/auth/session'
 import { logAuditoria } from '@/lib/services/auditoria'
+import { z } from 'zod'
+
+const tipoTransporteSchema = z.preprocess(
+  (value) => (value === '4x4' ? 'quatro_x_quatro' : value),
+  z.enum([
+    'van',
+    'quatro_x_quatro',
+    'executivo_cidade',
+    'executivo_fora_cidade',
+    'aereo_cliente',
+    'aereo_guia',
+  ])
+)
+
+const createTransporteSchema = z.object({
+  tipo: tipoTransporteSchema,
+  fornecedorId: z.string().optional().nullable(),
+  origem: z.string().optional().nullable(),
+  destino: z.string().optional().nullable(),
+  dataPartida: z.string().optional().nullable(),
+  dataChegada: z.string().optional().nullable(),
+  custo: z
+    .preprocess(
+      (value) => {
+        if (value === undefined || value === null || value === '') return null
+        if (typeof value === 'number') return value
+        const n = Number(value)
+        return Number.isNaN(n) ? value : n
+      },
+      z.number().nonnegative().nullable().optional()
+    )
+    .optional(),
+  moeda: z.enum(['BRL', 'USD', 'EUR']).optional().nullable(),
+})
 
 // POST /api/os/[id]/transportes - Adicionar transporte
 export async function POST(
@@ -13,13 +47,25 @@ export async function POST(
     const body = await request.json()
     const osId = params.id
 
-    const { tipo, fornecedorId, origem, destino, dataPartida, dataChegada, custo, moeda } = body
+    const validatedData = createTransporteSchema.parse(body)
 
-    if (!tipo) {
-      return NextResponse.json(
-        { success: false, error: 'Tipo de transporte é obrigatório' },
-        { status: 400 }
-      )
+    if (validatedData.dataPartida) {
+      const dt = new Date(validatedData.dataPartida)
+      if (Number.isNaN(dt.getTime())) {
+        return NextResponse.json(
+          { success: false, error: 'Dados inválidos', details: [{ path: ['dataPartida'], message: 'Data inválida' }] },
+          { status: 400 }
+        )
+      }
+    }
+    if (validatedData.dataChegada) {
+      const dt = new Date(validatedData.dataChegada)
+      if (Number.isNaN(dt.getTime())) {
+        return NextResponse.json(
+          { success: false, error: 'Dados inválidos', details: [{ path: ['dataChegada'], message: 'Data inválida' }] },
+          { status: 400 }
+        )
+      }
     }
 
     // Verificar se a OS existe e pertence à organização
@@ -38,10 +84,10 @@ export async function POST(
     }
 
     // Se fornecedor foi especificado, verificar se existe
-    if (fornecedorId) {
+    if (validatedData.fornecedorId) {
       const fornecedor = await prisma.fornecedor.findFirst({
         where: {
-          id: fornecedorId,
+          id: validatedData.fornecedorId,
           orgId: session.orgId,
         },
       })
@@ -57,14 +103,14 @@ export async function POST(
     const transporte = await prisma.transporte.create({
       data: {
         osId,
-        tipo,
-        fornecedorId: fornecedorId || null,
-        origem: origem || null,
-        destino: destino || null,
-        dataPartida: dataPartida ? new Date(dataPartida) : null,
-        dataChegada: dataChegada ? new Date(dataChegada) : null,
-        custo: custo ? parseFloat(custo) : null,
-        moeda: moeda || 'BRL',
+        tipo: validatedData.tipo,
+        fornecedorId: validatedData.fornecedorId || null,
+        origem: validatedData.origem || null,
+        destino: validatedData.destino || null,
+        dataPartida: validatedData.dataPartida ? new Date(validatedData.dataPartida) : null,
+        dataChegada: validatedData.dataChegada ? new Date(validatedData.dataChegada) : null,
+        custo: validatedData.custo === undefined ? null : validatedData.custo,
+        moeda: validatedData.moeda || 'BRL',
       },
       include: {
         fornecedor: {
@@ -105,6 +151,13 @@ export async function POST(
       return NextResponse.json(
         { success: false, error: 'Não autenticado' },
         { status: 401 }
+      )
+    }
+
+    if (error.name === 'ZodError') {
+      return NextResponse.json(
+        { success: false, error: 'Dados inválidos', details: error.errors },
+        { status: 400 }
       )
     }
 

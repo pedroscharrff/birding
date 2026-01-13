@@ -1,11 +1,11 @@
 module.exports = {
   apps: [{
     name: 'ostour',
-    script: 'npm',
-    args: 'start',
+    script: 'node',
+    args: '.next/standalone/server.js',
     cwd: '/home/ostour/birding',
     instances: 1,
-    exec_mode: 'cluster',
+    exec_mode: 'fork',
     env: {
       NODE_ENV: 'production',
       PORT: 3000

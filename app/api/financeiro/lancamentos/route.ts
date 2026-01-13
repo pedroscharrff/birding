@@ -11,11 +11,11 @@ export async function GET(request: NextRequest) {
     
     // Validar query params
     const query = listLancamentosQuerySchema.parse({
-      osId: searchParams.get('osId'),
-      categoria: searchParams.get('categoria'),
-      tipo: searchParams.get('tipo'),
-      dataInicio: searchParams.get('dataInicio'),
-      dataFim: searchParams.get('dataFim'),
+      osId: searchParams.get('osId') || undefined,
+      categoria: searchParams.get('categoria') || undefined,
+      tipo: searchParams.get('tipo') || undefined,
+      dataInicio: searchParams.get('dataInicio') || undefined,
+      dataFim: searchParams.get('dataFim') || undefined,
       page: searchParams.get('page') || '1',
       limit: searchParams.get('limit') || '50',
     })
@@ -105,6 +105,13 @@ export async function GET(request: NextRequest) {
       return NextResponse.json(
         { success: false, error: 'Não autenticado' },
         { status: 401 }
+      )
+    }
+
+    if (error.name === 'ZodError') {
+      return NextResponse.json(
+        { success: false, error: 'Dados inválidos', details: error.errors },
+        { status: 400 }
       )
     }
     

@@ -4,16 +4,28 @@ import { requireAuth } from '@/lib/auth/session'
 import { logAuditoria } from '@/lib/services/auditoria'
 import { z } from 'zod'
 
+const tipoTransporteSchema = z.preprocess(
+  (value) => (value === '4x4' ? 'quatro_x_quatro' : value),
+  z.enum([
+    'van',
+    'quatro_x_quatro',
+    'executivo_cidade',
+    'executivo_fora_cidade',
+    'aereo_cliente',
+    'aereo_guia',
+  ])
+)
+
 // Schema de validação para atualização de transporte
 const updateTransporteSchema = z.object({
-  tipo: z.string().optional(),
+  tipo: tipoTransporteSchema.optional(),
   fornecedorId: z.string().optional().nullable(),
   origem: z.string().optional().nullable(),
   destino: z.string().optional().nullable(),
   dataPartida: z.string().optional().nullable(),
   dataChegada: z.string().optional().nullable(),
   custo: z.number().optional().nullable(),
-  moeda: z.string().optional().nullable(),
+  moeda: z.enum(['BRL', 'USD', 'EUR']).optional().nullable(),
 })
 
 // PATCH /api/os/[id]/transportes/[transporteId] - Atualizar transporte
@@ -84,10 +96,32 @@ export async function PATCH(
     if (validatedData.origem !== undefined) updateData.origem = validatedData.origem
     if (validatedData.destino !== undefined) updateData.destino = validatedData.destino
     if (validatedData.dataPartida !== undefined) {
-      updateData.dataPartida = validatedData.dataPartida ? new Date(validatedData.dataPartida) : null
+      if (validatedData.dataPartida) {
+        const dt = new Date(validatedData.dataPartida)
+        if (Number.isNaN(dt.getTime())) {
+          return NextResponse.json(
+            { success: false, error: 'Dados inválidos', details: [{ path: ['dataPartida'], message: 'Data inválida' }] },
+            { status: 400 }
+          )
+        }
+        updateData.dataPartida = dt
+      } else {
+        updateData.dataPartida = null
+      }
     }
     if (validatedData.dataChegada !== undefined) {
-      updateData.dataChegada = validatedData.dataChegada ? new Date(validatedData.dataChegada) : null
+      if (validatedData.dataChegada) {
+        const dt = new Date(validatedData.dataChegada)
+        if (Number.isNaN(dt.getTime())) {
+          return NextResponse.json(
+            { success: false, error: 'Dados inválidos', details: [{ path: ['dataChegada'], message: 'Data inválida' }] },
+            { status: 400 }
+          )
+        }
+        updateData.dataChegada = dt
+      } else {
+        updateData.dataChegada = null
+      }
     }
     if (validatedData.custo !== undefined) updateData.custo = validatedData.custo
     if (validatedData.moeda !== undefined) updateData.moeda = validatedData.moeda

@@ -4,6 +4,7 @@ import { prisma } from '@/lib/db/prisma'
 import { atualizarStatusPagamentoDespesa } from '@/lib/services/despesas'
 import { logAuditoria } from '@/lib/services/auditoria'
 import { z } from 'zod'
+import { Prisma } from '@prisma/client'
 
 // Schema para arquivo uploadado
 const uploadedFileSchema = z.object({
@@ -21,6 +22,7 @@ const updateDespesaSchema = z.object({
   formaPagamento: z.string().optional().nullable(),
   referenciaPagamento: z.string().optional().nullable(),
   comprovantes: z.array(uploadedFileSchema).optional().nullable(),
+  arquivos: z.array(uploadedFileSchema).optional().nullable(),
 })
 
 /**
@@ -87,6 +89,18 @@ export async function PATCH(
       )
     }
 
+    const arquivos = validatedData.arquivos ?? validatedData.comprovantes
+
+    if (validatedData.dataPagamento) {
+      const dt = new Date(validatedData.dataPagamento)
+      if (Number.isNaN(dt.getTime())) {
+        return NextResponse.json(
+          { success: false, error: 'Dados inválidos', details: [{ path: ['dataPagamento'], message: 'Data inválida' }] },
+          { status: 400 }
+        )
+      }
+    }
+
     // Atualizar despesa
     const despesaAtualizada = await atualizarStatusPagamentoDespesa(
       tipo as any,
@@ -96,7 +110,7 @@ export async function PATCH(
         dataPagamento: validatedData.dataPagamento ? new Date(validatedData.dataPagamento) : null,
         formaPagamento: validatedData.formaPagamento,
         referenciaPagamento: validatedData.referenciaPagamento,
-        comprovantes: validatedData.comprovantes,
+        arquivos,
       }
     )
 
@@ -146,6 +160,21 @@ export async function PATCH(
         { success: false, error: 'Dados inválidos', details: error.errors },
         { status: 400 }
       )
+    }
+
+    if (error instanceof Prisma.PrismaClientKnownRequestError) {
+      if (error.code === 'P2025') {
+        return NextResponse.json(
+          { success: false, error: 'Despesa não encontrada' },
+          { status: 404 }
+        )
+      }
+      if (error.code === 'P2003') {
+        return NextResponse.json(
+          { success: false, error: 'Dados inválidos' },
+          { status: 400 }
+        )
+      }
     }
 
     return NextResponse.json(

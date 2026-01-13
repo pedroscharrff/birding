@@ -46,7 +46,7 @@ export function DespesaPagarDialog({ open, onOpenChange, osId, despesa, onSucces
         dataPagamento: formData.dataPagamento || null,
         formaPagamento: formData.formaPagamento || null,
         referenciaPagamento: formData.referenciaPagamento || null,
-        comprovantes: comprovantes.length > 0 ? comprovantes : null,
+        arquivos: comprovantes.length > 0 ? comprovantes : null,
       }
 
       const res = await fetch(`/api/os/${osId}/despesas/${despesa.tipo}/${despesa.id}`, {

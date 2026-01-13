@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db/prisma';
 import { requireAuth } from '@/lib/auth/session';
 import { hashPassword } from '@/lib/auth/password';
-import { RoleGlobal } from '@prisma/client';
+import { Prisma, RoleGlobal } from '@prisma/client';
 
 export async function GET(
   request: NextRequest,
@@ -109,6 +109,13 @@ export async function PATCH(
 
     const dataToUpdate: any = {};
 
+    if (senha !== undefined && senha !== null && String(senha).length > 0 && String(senha).length < 6) {
+      return NextResponse.json(
+        { error: 'Senha deve ter no mínimo 6 caracteres' },
+        { status: 400 }
+      );
+    }
+
     if (nome !== undefined) dataToUpdate.nome = nome;
     if (email !== undefined) dataToUpdate.email = email;
     if (telefone !== undefined) dataToUpdate.telefone = telefone;
@@ -121,7 +128,12 @@ export async function PATCH(
       // Isso causaria violação de FK. Normalizamos:
       // - '' ou null => limpa supervisor (NULL)
       // - string => valida que o supervisor existe na mesma organização
-      if (supervisorId === '' || supervisorId === null) {
+      if (
+        supervisorId === '' ||
+        supervisorId === null ||
+        supervisorId === 'null' ||
+        supervisorId === 'undefined'
+      ) {
         dataToUpdate.supervisorId = null;
       } else {
         const supervisorExiste = await prisma.usuario.findFirst({
@@ -171,6 +183,28 @@ export async function PATCH(
     if (error.message === 'Não autenticado') {
       return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
     }
+
+    if (error instanceof Prisma.PrismaClientKnownRequestError) {
+      if (error.code === 'P2002') {
+        return NextResponse.json(
+          { error: 'Email já cadastrado' },
+          { status: 400 }
+        );
+      }
+      if (error.code === 'P2025') {
+        return NextResponse.json(
+          { error: 'Usuário não encontrado' },
+          { status: 404 }
+        );
+      }
+      if (error.code === 'P2003') {
+        return NextResponse.json(
+          { error: 'Dados inválidos' },
+          { status: 400 }
+        );
+      }
+    }
+
     return NextResponse.json(
       { error: 'Erro ao atualizar usuário' },
       { status: 500 }
