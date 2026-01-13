@@ -64,3 +64,25 @@ export interface FluxoCaixaMensal {
   saidas: number
   saldo: number
 }
+
+// Tipo unificado para tarifas de fornecedor
+import { Prisma } from '@prisma/client'
+
+// Estende o tipo do Prisma para incluir campos de hotelaria
+export interface FornecedorTarifa {
+  id: string
+  fornecedorId: string
+  descricao: string
+  valor: Prisma.Decimal
+  moeda: string
+  unidade: string | null
+  vigenciaInicio: Date | null
+  vigenciaFim: Date | null
+  ativo: boolean
+  observacoes: string | null
+  tipoQuarto: string | null
+  regime: string | null
+  quartos: number | null
+  createdAt: Date
+  updatedAt: Date
+}

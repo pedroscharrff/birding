@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { useToast } from '@/hooks/useToast'
 import { TarifaFormDialog } from '@/components/forms/TarifaFormDialog'
+import { FornecedorTarifa } from '@/types/financeiro'
 import { 
   DollarSign, 
   Plus, 
@@ -19,21 +20,6 @@ import {
   Utensils
 } from 'lucide-react'
 
-interface Tarifa {
-  id: string
-  descricao: string
-  valor: number
-  moeda: string
-  unidade?: string | null
-  vigenciaInicio?: string | null
-  vigenciaFim?: string | null
-  ativo: boolean
-  observacoes?: string | null
-  tipoQuarto?: string | null
-  regime?: string | null
-  quartos?: number | null
-}
-
 interface Fornecedor {
   id: string
   tipo: string
@@ -45,11 +31,11 @@ interface TarifasManagerProps {
 
 export function TarifasManager({ fornecedorId }: TarifasManagerProps) {
   const { toast } = useToast()
-  const [tarifas, setTarifas] = useState<Tarifa[]>([])
+  const [tarifas, setTarifas] = useState<FornecedorTarifa[]>([])
   const [fornecedor, setFornecedor] = useState<Fornecedor | null>(null)
   const [loading, setLoading] = useState(true)
   const [dialogOpen, setDialogOpen] = useState(false)
-  const [editingTarifa, setEditingTarifa] = useState<Tarifa | null>(null)
+  const [editingTarifa, setEditingTarifa] = useState<FornecedorTarifa | null>(null)
 
   useEffect(() => {
     loadFornecedor()
@@ -89,7 +75,7 @@ export function TarifasManager({ fornecedorId }: TarifasManagerProps) {
     }
   }
 
-  const handleEdit = (tarifa: Tarifa) => {
+  const handleEdit = (tarifa: FornecedorTarifa) => {
     setEditingTarifa(tarifa)
     setDialogOpen(true)
   }
@@ -126,7 +112,7 @@ export function TarifasManager({ fornecedorId }: TarifasManagerProps) {
     }
   }
 
-  const handleToggleAtivo = async (tarifa: Tarifa) => {
+  const handleToggleAtivo = async (tarifa: FornecedorTarifa) => {
     try {
       const res = await fetch(`/api/fornecedores/${fornecedorId}/tarifas/${tarifa.id}`, {
         method: 'PATCH',
@@ -148,18 +134,19 @@ export function TarifasManager({ fornecedorId }: TarifasManagerProps) {
     }
   }
 
-  const formatCurrency = (valor: number, moeda: string) => {
+  const formatCurrency = (valor: any, moeda: string) => {
+    const numericValue = typeof valor === 'number' ? valor : Number(valor)
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
       currency: moeda,
-    }).format(valor)
+    }).format(numericValue)
   }
 
-  const formatDate = (date: string) => {
+  const formatDate = (date: Date | string) => {
     return new Date(date).toLocaleDateString('pt-BR')
   }
 
-  const isVigente = (tarifa: Tarifa) => {
+  const isVigente = (tarifa: FornecedorTarifa) => {
     const hoje = new Date()
     hoje.setHours(0, 0, 0, 0)
     

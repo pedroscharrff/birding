@@ -8,29 +8,15 @@ import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { useToast } from '@/hooks/useToast'
 import { PresetSelect } from '@/components/forms/PresetSelect'
+import { FornecedorTarifa } from '@/types/financeiro'
 import { DollarSign, Calendar, Save, X, Building2, Utensils, Info } from 'lucide-react'
-
-interface Tarifa {
-  id: string
-  descricao: string
-  valor: number
-  moeda: string
-  unidade?: string
-  vigenciaInicio?: string
-  vigenciaFim?: string
-  ativo: boolean
-  observacoes?: string
-  tipoQuarto?: string
-  regime?: string
-  quartos?: number
-}
 
 interface TarifaFormDialogProps {
   open: boolean
   onClose: () => void
   fornecedorId: string
   fornecedorTipo: string
-  tarifa?: Tarifa | null
+  tarifa?: FornecedorTarifa | null
   onSuccess?: () => void
 }
 
@@ -96,11 +82,11 @@ export function TarifaFormDialog({
     if (tarifa) {
       setFormData({
         descricao: tarifa.descricao || '',
-        valor: tarifa.valor?.toString() || '',
+        valor: tarifa.valor ? Number(tarifa.valor).toString() : '',
         moeda: tarifa.moeda || 'BRL',
         unidade: tarifa.unidade || '',
-        vigenciaInicio: tarifa.vigenciaInicio ? tarifa.vigenciaInicio.split('T')[0] : '',
-        vigenciaFim: tarifa.vigenciaFim ? tarifa.vigenciaFim.split('T')[0] : '',
+        vigenciaInicio: tarifa.vigenciaInicio ? new Date(tarifa.vigenciaInicio).toISOString().split('T')[0] : '',
+        vigenciaFim: tarifa.vigenciaFim ? new Date(tarifa.vigenciaFim).toISOString().split('T')[0] : '',
         ativo: tarifa.ativo ?? true,
         observacoes: tarifa.observacoes || '',
         tipoQuarto: tarifa.tipoQuarto || '',

@@ -385,6 +385,7 @@ JWT_REFRESH_SECRET="$JWT_REFRESH_SECRET"
 # Next.js
 NEXT_PUBLIC_APP_URL="https://$DOMAIN"
 NODE_ENV="production"
+OUTPUT="standalone"
 
 # Feature Flags
 NEXT_PUBLIC_ENABLE_CLIENTE_PORTAL="false"
@@ -395,16 +396,94 @@ chown ostour:ostour /home/ostour/birding/.env
 chmod 600 /home/ostour/birding/.env
 print_success "Arquivo .env criado"
 
+# Verificar se Next.js está configurado corretamente
+print_info "Configurando Next.js para produção..."
+
+# Atualizar next.config.js para standalone
+if [ -f /home/ostour/birding/next.config.js ]; then
+    sudo -u ostour bash << 'EOF'
+cd /home/ostour/birding
+
+# Backup do config original
+cp next.config.js next.config.js.backup
+
+# Adicionar output standalone se não existir
+node -e "
+const fs = require('fs');
+let config = fs.readFileSync('next.config.js', 'utf8');
+
+// Verificar se já tem output: 'standalone'
+if (!config.includes(\"output:\")) {
+  // Adicionar output standalone
+  config = config.replace(
+    /const nextConfig = {/,
+    \"const nextConfig = {\\n  output: 'standalone',\"
+  );
+  fs.writeFileSync('next.config.js', config);
+  console.log('✓ Configuração standalone adicionada');
+} else {
+  console.log('✓ Configuração standalone já existe');
+}
+"
+EOF
+    print_success "Next.js configurado para standalone"
+fi
+
 # Instalar dependências e build
 print_info "Instalando dependências (isso pode demorar)..."
-sudo -u ostour bash << EOF
+if sudo -u ostour bash << 'EOF'
 cd /home/ostour/birding
-npm install
+
+echo "📦 Instalando dependências..."
+npm install --production=false
+
+if [ $? -ne 0 ]; then
+    echo "❌ Erro ao instalar dependências"
+    exit 1
+fi
+
+echo "🔧 Gerando Prisma Client..."
 npx prisma generate
+
+if [ $? -ne 0 ]; then
+    echo "❌ Erro ao gerar Prisma Client"
+    exit 1
+fi
+
+echo "� Corrigindo rotas dinâmicas da API..."
+if [ -f scripts/fix-dynamic-routes.js ]; then
+    node scripts/fix-dynamic-routes.js
+fi
+
+echo "�🗄️ Executando migrations..."
 npx prisma migrate deploy
-npm run build
+
+if [ $? -ne 0 ]; then
+    echo "❌ Erro ao executar migrations"
+    exit 1
+fi
+
+echo "🏗️ Buildando aplicação..."
+NODE_ENV=production npm run build
+
+if [ $? -ne 0 ]; then
+    echo "❌ Erro ao buildar aplicação"
+    exit 1
+fi
+
+echo "✅ Build concluído com sucesso"
 EOF
-print_success "Aplicação buildada"
+then
+    print_success "Aplicação buildada com sucesso"
+else
+    print_error "Falha no build da aplicação"
+    print_info "Verifique os logs acima para detalhes do erro"
+    print_info "Erros comuns:"
+    print_info "  - Rotas dinâmicas sem generateStaticParams"
+    print_info "  - Uso de cookies/headers em rotas que tentam ser estáticas"
+    print_info "  - Dependências faltando"
+    exit 1
+fi
 
 # Criar diretório de logs
 mkdir -p /home/ostour/logs
@@ -417,13 +496,12 @@ print_success "Diretório de logs criado"
 
 print_header "12. Configurando PM2"
 
-# Criar ecosystem.config.js se não existir
-if [ ! -f /home/ostour/birding/ecosystem.config.js ]; then
-    cat > /home/ostour/birding/ecosystem.config.js << EOF
+# Criar ecosystem.config.js otimizado para standalone
+cat > /home/ostour/birding/ecosystem.config.js << 'EOF'
 module.exports = {
   apps: [{
     name: 'ostour',
-    script: 'npm',
+    script: './node_modules/next/dist/bin/next',
     args: 'start',
     cwd: '/home/ostour/birding',
     instances: 1,
@@ -438,12 +516,14 @@ module.exports = {
     merge_logs: true,
     autorestart: true,
     watch: false,
-    max_memory_restart: '1G'
+    max_memory_restart: '1G',
+    max_restarts: 10,
+    min_uptime: '10s'
   }]
 };
 EOF
-    chown ostour:ostour /home/ostour/birding/ecosystem.config.js
-fi
+chown ostour:ostour /home/ostour/birding/ecosystem.config.js
+print_success "Ecosystem config criado"
 
 # Iniciar aplicação com PM2
 sudo -u ostour bash << EOF
@@ -460,9 +540,128 @@ print_success "PM2 configurado"
 # CONFIGURAR NGINX
 # ============================================
 
-print_header "13. Configurando Nginx"
+print_header "13. Configurando Nginx (HTTP temporário)"
 
+# Primeiro: configuração HTTP apenas para validação SSL
 cat > /etc/nginx/sites-available/ostour << 'NGINXEOF'
+upstream nextjs_app {
+    server 127.0.0.1:3000;
+    keepalive 64;
+}
+
+upstream minio_console {
+    server 127.0.0.1:9001;
+    keepalive 64;
+}
+
+upstream minio_api {
+    server 127.0.0.1:9000;
+    keepalive 64;
+}
+
+server {
+    listen 80;
+    listen [::]:80;
+    server_name DOMAIN_PLACEHOLDER www.DOMAIN_PLACEHOLDER;
+    
+    access_log /var/log/nginx/ostour_access.log;
+    error_log /var/log/nginx/ostour_error.log;
+    
+    client_max_body_size 100M;
+    
+    # Permitir validação SSL
+    location /.well-known/acme-challenge/ {
+        root /var/www/html;
+    }
+    
+    # Proxy para aplicação
+    location / {
+        proxy_pass http://nextjs_app;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_cache_bypass $http_upgrade;
+    }
+}
+NGINXEOF
+
+# Substituir placeholder pelo domínio real
+sed -i "s/DOMAIN_PLACEHOLDER/$DOMAIN/g" /etc/nginx/sites-available/ostour
+
+# Ativar site
+ln -sf /etc/nginx/sites-available/ostour /etc/nginx/sites-enabled/
+rm -f /etc/nginx/sites-enabled/default
+
+# Testar e recarregar nginx
+nginx -t && systemctl reload nginx
+print_success "Nginx configurado (HTTP)"
+
+# ============================================
+# CONFIGURAR SSL
+# ============================================
+
+print_header "14. Obtendo Certificado SSL"
+
+# Criar diretório para validação
+mkdir -p /var/www/html/.well-known/acme-challenge
+
+# Obter certificado SSL
+print_info "Obtendo certificado SSL do Let's Encrypt..."
+
+# Verificar se já existe certificado
+if [ -d "/etc/letsencrypt/live/$DOMAIN" ]; then
+    print_warning "Certificado já existe, expandindo para incluir www..."
+    certbot certonly --webroot -w /var/www/html \
+        -d $DOMAIN -d www.$DOMAIN \
+        --expand \
+        --non-interactive \
+        --agree-tos \
+        --email $SSL_EMAIL
+else
+    print_info "Obtendo novo certificado SSL..."
+    certbot certonly --webroot -w /var/www/html \
+        -d $DOMAIN -d www.$DOMAIN \
+        --non-interactive \
+        --agree-tos \
+        --email $SSL_EMAIL
+fi
+
+if [ $? -eq 0 ]; then
+    print_success "Certificado SSL obtido com sucesso"
+else
+    print_error "Falha ao obter certificado SSL"
+    print_warning "Verifique se o domínio $DOMAIN está apontando para este servidor"
+    print_info "Comandos para debug:"
+    print_info "  - ping $DOMAIN (deve apontar para este IP)"
+    print_info "  - curl -I http://$DOMAIN (deve responder)"
+    print_info "  - certbot certificates (listar certificados existentes)"
+    print_info ""
+    print_info "Para tentar novamente manualmente:"
+    print_info "  certbot certonly --webroot -w /var/www/html -d $DOMAIN -d www.$DOMAIN --expand"
+    
+    read -p "Deseja continuar sem SSL? (s/n): " -n 1 -r
+    echo
+    if [[ ! $REPLY =~ ^[Ss]$ ]]; then
+        exit 1
+    fi
+    print_warning "Continuando sem SSL - aplicação acessível via HTTP"
+fi
+
+# ============================================
+# CONFIGURAR NGINX COM SSL
+# ============================================
+
+print_header "15. Configurando Nginx com SSL"
+
+# Verificar se certificados existem
+if [ -f "/etc/letsencrypt/live/$DOMAIN/fullchain.pem" ]; then
+    print_info "Configurando Nginx com HTTPS..."
+    
+    cat > /etc/nginx/sites-available/ostour << 'NGINXEOF'
 upstream nextjs_app {
     server 127.0.0.1:3000;
     keepalive 64;
@@ -569,39 +768,26 @@ server {
 }
 NGINXEOF
 
-# Substituir placeholder pelo domínio real
-sed -i "s/DOMAIN_PLACEHOLDER/$DOMAIN/g" /etc/nginx/sites-available/ostour
-
-# Ativar site
-ln -sf /etc/nginx/sites-available/ostour /etc/nginx/sites-enabled/
-rm -f /etc/nginx/sites-enabled/default
-
-print_success "Nginx configurado"
-
-# ============================================
-# CONFIGURAR SSL
-# ============================================
-
-print_header "14. Configurando SSL (Let's Encrypt)"
-
-# Testar nginx antes de obter certificado
-nginx -t
-
-# Obter certificado SSL
-print_info "Obtendo certificado SSL..."
-certbot --nginx -d $DOMAIN -d www.$DOMAIN --non-interactive --agree-tos --email $SSL_EMAIL --redirect
-
-print_success "Certificado SSL configurado"
-
-# Recarregar nginx
-systemctl reload nginx
-print_success "Nginx recarregado"
+    # Substituir placeholder pelo domínio real
+    sed -i "s/DOMAIN_PLACEHOLDER/$DOMAIN/g" /etc/nginx/sites-available/ostour
+    
+    # Testar e recarregar nginx
+    nginx -t && systemctl reload nginx
+    print_success "Nginx configurado com SSL"
+    
+    # Configurar renovação automática
+    print_info "Configurando renovação automática de certificados..."
+    (crontab -l 2>/dev/null | grep -v certbot; echo "0 3 * * * certbot renew --quiet --post-hook 'systemctl reload nginx'") | crontab -
+    print_success "Renovação automática configurada"
+else
+    print_warning "Certificados SSL não encontrados - mantendo configuração HTTP"
+fi
 
 # ============================================
 # CONFIGURAR FIREWALL
 # ============================================
 
-print_header "15. Configurando Firewall"
+print_header "16. Configurando Firewall"
 
 ufw --force enable
 ufw allow 22/tcp
@@ -615,7 +801,7 @@ print_success "Firewall configurado"
 # CONFIGURAR BACKUPS
 # ============================================
 
-print_header "16. Configurando Backups Automáticos"
+print_header "17. Configurando Backups Automáticos"
 
 mkdir -p /home/ostour/backups
 chown ostour:ostour /home/ostour/backups
@@ -663,7 +849,7 @@ print_success "Backups automáticos configurados (diariamente às 2h)"
 # CRIAR USUÁRIO ADMIN
 # ============================================
 
-print_header "17. Criar Usuário Administrador"
+print_header "18. Criar Usuário Administrador"
 
 read -p "Deseja criar um usuário admin agora? (s/n): " -n 1 -r
 echo

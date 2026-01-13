@@ -118,6 +118,7 @@ export interface LogAuditoriaParams {
   entidadeId?: string
   dadosAntigos?: any
   dadosNovos?: any
+  campos?: string[]
   descricao?: string
   metadata?: Record<string, any>
 }
