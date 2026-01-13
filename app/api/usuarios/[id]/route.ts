@@ -116,7 +116,32 @@ export async function PATCH(
     if (ativo !== undefined) dataToUpdate.ativo = ativo;
     if (departamento !== undefined) dataToUpdate.departamento = departamento;
     if (cargo !== undefined) dataToUpdate.cargo = cargo;
-    if (supervisorId !== undefined) dataToUpdate.supervisorId = supervisorId;
+    if (supervisorId !== undefined) {
+      // O frontend pode enviar supervisorId como string vazia ao atualizar apenas a senha.
+      // Isso causaria violação de FK. Normalizamos:
+      // - '' ou null => limpa supervisor (NULL)
+      // - string => valida que o supervisor existe na mesma organização
+      if (supervisorId === '' || supervisorId === null) {
+        dataToUpdate.supervisorId = null;
+      } else {
+        const supervisorExiste = await prisma.usuario.findFirst({
+          where: {
+            id: supervisorId,
+            orgId: session.orgId,
+          },
+          select: { id: true },
+        });
+
+        if (!supervisorExiste) {
+          return NextResponse.json(
+            { error: 'Supervisor inválido' },
+            { status: 400 }
+          );
+        }
+
+        dataToUpdate.supervisorId = supervisorId;
+      }
+    }
     if (permissoes !== undefined) dataToUpdate.permissoes = permissoes;
     if (avatar !== undefined) dataToUpdate.avatar = avatar;
 
