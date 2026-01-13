@@ -385,6 +385,7 @@ JWT_REFRESH_SECRET="$JWT_REFRESH_SECRET"
 # Next.js
 NEXT_PUBLIC_APP_URL="https://$DOMAIN"
 NODE_ENV="production"
+OUTPUT="standalone"
 
 # Feature Flags
 NEXT_PUBLIC_ENABLE_CLIENTE_PORTAL="false"
@@ -395,16 +396,94 @@ chown ostour:ostour /home/ostour/birding/.env
 chmod 600 /home/ostour/birding/.env
 print_success "Arquivo .env criado"
 
+# Verificar se Next.js está configurado corretamente
+print_info "Configurando Next.js para produção..."
+
+# Atualizar next.config.js para standalone
+if [ -f /home/ostour/birding/next.config.js ]; then
+    sudo -u ostour bash << 'EOF'
+cd /home/ostour/birding
+
+# Backup do config original
+cp next.config.js next.config.js.backup
+
+# Adicionar output standalone se não existir
+node -e "
+const fs = require('fs');
+let config = fs.readFileSync('next.config.js', 'utf8');
+
+// Verificar se já tem output: 'standalone'
+if (!config.includes(\"output:\")) {
+  // Adicionar output standalone
+  config = config.replace(
+    /const nextConfig = {/,
+    \"const nextConfig = {\\n  output: 'standalone',\"
+  );
+  fs.writeFileSync('next.config.js', config);
+  console.log('✓ Configuração standalone adicionada');
+} else {
+  console.log('✓ Configuração standalone já existe');
+}
+"
+EOF
+    print_success "Next.js configurado para standalone"
+fi
+
 # Instalar dependências e build
 print_info "Instalando dependências (isso pode demorar)..."
-sudo -u ostour bash << EOF
+if sudo -u ostour bash << 'EOF'
 cd /home/ostour/birding
-npm install
+
+echo "📦 Instalando dependências..."
+npm install --production=false
+
+if [ $? -ne 0 ]; then
+    echo "❌ Erro ao instalar dependências"
+    exit 1
+fi
+
+echo "🔧 Gerando Prisma Client..."
 npx prisma generate
+
+if [ $? -ne 0 ]; then
+    echo "❌ Erro ao gerar Prisma Client"
+    exit 1
+fi
+
+echo "� Corrigindo rotas dinâmicas da API..."
+if [ -f scripts/fix-dynamic-routes.js ]; then
+    node scripts/fix-dynamic-routes.js
+fi
+
+echo "�🗄️ Executando migrations..."
 npx prisma migrate deploy
-npm run build
+
+if [ $? -ne 0 ]; then
+    echo "❌ Erro ao executar migrations"
+    exit 1
+fi
+
+echo "🏗️ Buildando aplicação..."
+NODE_ENV=production npm run build
+
+if [ $? -ne 0 ]; then
+    echo "❌ Erro ao buildar aplicação"
+    exit 1
+fi
+
+echo "✅ Build concluído com sucesso"
 EOF
-print_success "Aplicação buildada"
+then
+    print_success "Aplicação buildada com sucesso"
+else
+    print_error "Falha no build da aplicação"
+    print_info "Verifique os logs acima para detalhes do erro"
+    print_info "Erros comuns:"
+    print_info "  - Rotas dinâmicas sem generateStaticParams"
+    print_info "  - Uso de cookies/headers em rotas que tentam ser estáticas"
+    print_info "  - Dependências faltando"
+    exit 1
+fi
 
 # Criar diretório de logs
 mkdir -p /home/ostour/logs
@@ -417,13 +496,12 @@ print_success "Diretório de logs criado"
 
 print_header "12. Configurando PM2"
 
-# Criar ecosystem.config.js se não existir
-if [ ! -f /home/ostour/birding/ecosystem.config.js ]; then
-    cat > /home/ostour/birding/ecosystem.config.js << EOF
+# Criar ecosystem.config.js otimizado para standalone
+cat > /home/ostour/birding/ecosystem.config.js << 'EOF'
 module.exports = {
   apps: [{
     name: 'ostour',
-    script: 'npm',
+    script: './node_modules/next/dist/bin/next',
     args: 'start',
     cwd: '/home/ostour/birding',
     instances: 1,
@@ -438,12 +516,14 @@ module.exports = {
     merge_logs: true,
     autorestart: true,
     watch: false,
-    max_memory_restart: '1G'
+    max_memory_restart: '1G',
+    max_restarts: 10,
+    min_uptime: '10s'
   }]
 };
 EOF
-    chown ostour:ostour /home/ostour/birding/ecosystem.config.js
-fi
+chown ostour:ostour /home/ostour/birding/ecosystem.config.js
+print_success "Ecosystem config criado"
 
 # Iniciar aplicação com PM2
 sudo -u ostour bash << EOF
@@ -531,14 +611,38 @@ mkdir -p /var/www/html/.well-known/acme-challenge
 
 # Obter certificado SSL
 print_info "Obtendo certificado SSL do Let's Encrypt..."
-certbot certonly --webroot -w /var/www/html -d $DOMAIN -d www.$DOMAIN --non-interactive --agree-tos --email $SSL_EMAIL
+
+# Verificar se já existe certificado
+if [ -d "/etc/letsencrypt/live/$DOMAIN" ]; then
+    print_warning "Certificado já existe, expandindo para incluir www..."
+    certbot certonly --webroot -w /var/www/html \
+        -d $DOMAIN -d www.$DOMAIN \
+        --expand \
+        --non-interactive \
+        --agree-tos \
+        --email $SSL_EMAIL
+else
+    print_info "Obtendo novo certificado SSL..."
+    certbot certonly --webroot -w /var/www/html \
+        -d $DOMAIN -d www.$DOMAIN \
+        --non-interactive \
+        --agree-tos \
+        --email $SSL_EMAIL
+fi
 
 if [ $? -eq 0 ]; then
     print_success "Certificado SSL obtido com sucesso"
 else
     print_error "Falha ao obter certificado SSL"
     print_warning "Verifique se o domínio $DOMAIN está apontando para este servidor"
-    print_info "Você pode continuar com HTTP ou tentar novamente mais tarde com: certbot certonly --webroot -w /var/www/html -d $DOMAIN -d www.$DOMAIN"
+    print_info "Comandos para debug:"
+    print_info "  - ping $DOMAIN (deve apontar para este IP)"
+    print_info "  - curl -I http://$DOMAIN (deve responder)"
+    print_info "  - certbot certificates (listar certificados existentes)"
+    print_info ""
+    print_info "Para tentar novamente manualmente:"
+    print_info "  certbot certonly --webroot -w /var/www/html -d $DOMAIN -d www.$DOMAIN --expand"
+    
     read -p "Deseja continuar sem SSL? (s/n): " -n 1 -r
     echo
     if [[ ! $REPLY =~ ^[Ss]$ ]]; then

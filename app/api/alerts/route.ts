@@ -8,6 +8,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAlertsPaginated, getAlertsCount } from '@/lib/services/alerts-paginated'
 
+export const dynamic = 'force-dynamic'
+
 export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams
