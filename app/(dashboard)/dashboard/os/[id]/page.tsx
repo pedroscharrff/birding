@@ -265,11 +265,11 @@ export default function OSDetalhesPage() {
         </TabsContent>
 
         <TabsContent value="atividades" className="space-y-4">
-          <OSAtividadesSection osId={osId} atividades={os.atividades} onUpdate={() => {}} />
+          <OSAtividadesSection osId={osId} atividades={os.atividades.filter((a: any) => a.tipo === 'atividade' || !a.tipo)} onUpdate={() => {}} />
         </TabsContent>
 
         <TabsContent value="alimentacao" className="space-y-4">
-          <OSAlimentacaoSection osId={osId} alimentacoes={os.atividades.filter((a: any) => a.nome.toLowerCase().includes('almoço') || a.nome.toLowerCase().includes('jantar') || a.nome.toLowerCase().includes('café') || a.nome.toLowerCase().includes('refeição'))} onUpdate={() => {}} />
+          <OSAlimentacaoSection osId={osId} alimentacoes={os.atividades.filter((a: any) => a.tipo === 'alimentacao')} onUpdate={() => {}} />
         </TabsContent>
 
         <TabsContent value="financeiro" className="space-y-4">

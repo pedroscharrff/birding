@@ -104,6 +104,11 @@ enum CategoriaOSFornecedor {
   atividade
 }
 
+enum TipoAtividade {
+  atividade
+  alimentacao
+}
+
 enum RegimeHospedagem {
   sem_cafe
   cafe
@@ -407,16 +412,17 @@ model OSFornecedor {
 }
 
 model Atividade {
-  id                String      @id @default(uuid())
-  osId              String      @map("os_id")
+  id                String         @id @default(uuid())
+  osId              String         @map("os_id")
+  tipo              TipoAtividade  @default(atividade)
   nome              String
-  valor             Decimal?    @db.Decimal(12, 2)
-  moeda             Moeda       @default(BRL)
+  valor             Decimal?       @db.Decimal(12, 2)
+  moeda             Moeda          @default(BRL)
   localizacao       String?
-  quantidadeMaxima  Int?        @map("quantidade_maxima")
-  data              DateTime?   @db.Date
-  hora              DateTime?   @db.Time
-  fornecedorId      String?     @map("fornecedor_id")
+  quantidadeMaxima  Int?           @map("quantidade_maxima")
+  data              DateTime?      @db.Date
+  hora              DateTime?      @db.Time
+  fornecedorId      String?        @map("fornecedor_id")
   notas             String?
 
   // Controle de Pagamento
@@ -436,10 +442,12 @@ model Atividade {
   fornecedor Fornecedor? @relation(fields: [fornecedorId], references: [id])
 
   @@index([osId])
+  @@index([tipo])
   @@index([data])
   @@index([nome])
   @@index([statusPagamento])
   @@index([statusPagamento, data]) // Índice composto para alertas de despesas vencidas
+  @@index([osId, tipo]) // Índice composto para filtrar por tipo em uma OS
   @@map("os_atividades")
 }
 

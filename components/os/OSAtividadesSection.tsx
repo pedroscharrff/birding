@@ -73,6 +73,7 @@ export function OSAtividadesSection({ osId, atividades, onUpdate }: OSAtividades
     setLoading(true)
     try {
       const payload = {
+        tipo: 'atividade',
         ...formData,
         valor: formData.valor ? parseFloat(formData.valor) : undefined,
         quantidadeMaxima: formData.quantidadeMaxima ? parseInt(formData.quantidadeMaxima) : undefined,

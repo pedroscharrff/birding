@@ -77,8 +77,9 @@ export function OSAlimentacaoSection({ osId, alimentacoes, onUpdate }: OSAliment
 
     setLoading(true)
     try {
-      // Usar a API de atividades com categoria de alimentação
+      // Usar a API de atividades com tipo alimentação
       const payload = {
+        tipo: 'alimentacao',
         nome: formData.nome,
         fornecedorId: formData.fornecedorId || undefined,
         valor: formData.valor ? parseFloat(formData.valor) : undefined,
