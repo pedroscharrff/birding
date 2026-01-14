@@ -193,7 +193,19 @@ rm -f "$BUILD_LOG"
 print_success "Build concluído"
 
 # ============================================
-# 11. RELOAD/RESTART DA APLICAÇÃO
+# 11. COPIAR ARQUIVOS ESTÁTICOS (STANDALONE)
+# ============================================
+print_info "Copiando arquivos estáticos para standalone..."
+if [ -d ".next/standalone" ]; then
+    cp -r .next/static .next/standalone/.next/ 2>/dev/null || true
+    cp -r public .next/standalone/ 2>/dev/null || true
+    print_success "Arquivos estáticos copiados"
+else
+    print_warning "Diretório standalone não encontrado (pulando...)"
+fi
+
+# ============================================
+# 12. RELOAD/RESTART DA APLICAÇÃO
 # ============================================
 print_info "Reiniciando aplicação..."
 
@@ -218,7 +230,7 @@ else
 fi
 
 # ============================================
-# 12. HEALTHCHECK
+# 13. HEALTHCHECK
 # ============================================
 print_info "Verificando saúde da aplicação..."
 
@@ -269,7 +281,7 @@ else
 fi
 
 # ============================================
-# 13. VERIFICAÇÃO FINAL
+# 14. VERIFICAÇÃO FINAL
 # ============================================
 print_info "Verificação final..."
 pm2 status ostour

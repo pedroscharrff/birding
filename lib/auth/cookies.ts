@@ -9,11 +9,15 @@ const REFRESH_TOKEN_NAME = 'refresh_token'
 export async function setAccessTokenCookie(token: string) {
   const cookieStore = await cookies()
   
+  // Secure: true apenas se HTTPS estiver configurado (via env var ou NODE_ENV)
+  const isSecure = process.env.FORCE_SECURE_COOKIES === 'true' || 
+                   (process.env.NODE_ENV === 'production' && process.env.DISABLE_SECURE_COOKIES !== 'true')
+  
   cookieStore.set(ACCESS_TOKEN_NAME, token, {
     httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax',
-    maxAge: 60 * 15, // 15 minutos
+    secure: isSecure,
+    sameSite: 'lax', // 'lax' é adequado para same-site; use 'none' apenas se cross-origin + secure
+    maxAge: 60 * 30, // 30 minutos (aumentado de 15 para reduzir refreshes)
     path: '/',
   })
 }
@@ -24,9 +28,12 @@ export async function setAccessTokenCookie(token: string) {
 export async function setRefreshTokenCookie(token: string) {
   const cookieStore = await cookies()
   
+  const isSecure = process.env.FORCE_SECURE_COOKIES === 'true' || 
+                   (process.env.NODE_ENV === 'production' && process.env.DISABLE_SECURE_COOKIES !== 'true')
+  
   cookieStore.set(REFRESH_TOKEN_NAME, token, {
     httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
+    secure: isSecure,
     sameSite: 'lax',
     maxAge: 60 * 60 * 24 * 7, // 7 dias
     path: '/',

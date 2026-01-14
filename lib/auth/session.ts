@@ -14,15 +14,18 @@ export async function getSession(): Promise<JWTPayload | null> {
       // Tentativa de refresh direto, caso não haja access token mas exista refresh token
       const refreshToken = await getRefreshTokenCookie()
       console.log('[AUTH][getSession] no access token, refresh present?', Boolean(refreshToken))
-      if (!refreshToken) return null
+      if (!refreshToken) {
+        console.warn('[AUTH][getSession] no tokens available - user not authenticated')
+        return null
+      }
       try {
         const payload = await verifyRefreshToken(refreshToken)
         const newAccess = await signAccessToken(payload)
         await setAccessTokenCookie(newAccess)
-        console.log('[AUTH][getSession] refreshed from refresh-only path')
+        console.log('[AUTH][getSession] refreshed from refresh-only path, userId:', payload.userId)
         return payload
-      } catch (e) {
-        console.warn('[AUTH][getSession] refresh-only path failed')
+      } catch (e: any) {
+        console.error('[AUTH][getSession] refresh-only path failed:', e?.message || e)
         return null
       }
     }
@@ -30,21 +33,23 @@ export async function getSession(): Promise<JWTPayload | null> {
     const payload = await verifyAccessToken(token)
     console.log('[AUTH][getSession] payload', { userId: payload.userId, orgId: payload.orgId, role: payload.roleGlobal })
     return payload
-  } catch (error) {
+  } catch (error: any) {
     // Access token inválido/expirado: tentar refresh token
-    // @ts-ignore
-    console.warn('[AUTH][getSession] access verify failed', error?.message || error)
+    console.warn('[AUTH][getSession] access verify failed:', error?.message || error)
     try {
       const refreshToken = await getRefreshTokenCookie()
       console.log('[AUTH][getSession] attempting refresh, refresh present?', Boolean(refreshToken))
-      if (!refreshToken) return null
+      if (!refreshToken) {
+        console.error('[AUTH][getSession] no refresh token available after access token failure')
+        return null
+      }
       const payload = await verifyRefreshToken(refreshToken)
       const newAccess = await signAccessToken(payload)
       await setAccessTokenCookie(newAccess)
-      console.log('[AUTH][getSession] access refreshed successfully')
+      console.log('[AUTH][getSession] access refreshed successfully, userId:', payload.userId)
       return payload
-    } catch (e) {
-      console.warn('[AUTH][getSession] refresh failed')
+    } catch (e: any) {
+      console.error('[AUTH][getSession] refresh failed:', e?.message || e)
       return null
     }
   }
@@ -65,9 +70,11 @@ export async function requireAuth(): Promise<JWTPayload> {
   const session = await getSession()
   
   if (!session) {
+    console.error('[AUTH][requireAuth] authentication required but no valid session found')
     throw new Error('Não autenticado')
   }
   
+  console.log('[AUTH][requireAuth] authenticated:', { userId: session.userId, orgId: session.orgId })
   return session
 }
 
