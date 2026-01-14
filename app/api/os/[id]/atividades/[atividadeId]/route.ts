@@ -55,6 +55,9 @@ export async function PATCH(
         ...(validatedData.data && {
           data: new Date(validatedData.data),
         }),
+        ...(validatedData.hora && {
+          hora: new Date(`1970-01-01T${validatedData.hora}`),
+        }),
       },
       include: {
         fornecedor: {

@@ -42,6 +42,9 @@ export async function POST(
         ...(validatedData.data && {
           data: new Date(validatedData.data),
         }),
+        ...(validatedData.hora && {
+          hora: new Date(`1970-01-01T${validatedData.hora}`),
+        }),
         ...(validatedData.valor && {
           valor: validatedData.valor,
         }),
