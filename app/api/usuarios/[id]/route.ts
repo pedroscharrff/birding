@@ -3,6 +3,7 @@ import { prisma } from '@/lib/db/prisma';
 import { requireAuth } from '@/lib/auth/session';
 import { hashPassword } from '@/lib/auth/password';
 import { Prisma, RoleGlobal } from '@prisma/client';
+import { z } from 'zod';
 
 export async function GET(
   request: NextRequest,
@@ -128,17 +129,35 @@ export async function PATCH(
       // Isso causaria violação de FK. Normalizamos:
       // - '' ou null => limpa supervisor (NULL)
       // - string => valida que o supervisor existe na mesma organização
+      const normalizedSupervisorId =
+        typeof supervisorId === 'string' ? supervisorId.trim() : supervisorId;
+
       if (
-        supervisorId === '' ||
-        supervisorId === null ||
-        supervisorId === 'null' ||
-        supervisorId === 'undefined'
+        normalizedSupervisorId === '' ||
+        normalizedSupervisorId === null ||
+        normalizedSupervisorId === 'null' ||
+        normalizedSupervisorId === 'undefined'
       ) {
         dataToUpdate.supervisorId = null;
       } else {
+        if (typeof normalizedSupervisorId !== 'string') {
+          return NextResponse.json(
+            { error: 'Supervisor inválido' },
+            { status: 400 }
+          );
+        }
+
+        const parsedSupervisorId = z.string().uuid().safeParse(normalizedSupervisorId);
+        if (!parsedSupervisorId.success) {
+          return NextResponse.json(
+            { error: 'Supervisor inválido' },
+            { status: 400 }
+          );
+        }
+
         const supervisorExiste = await prisma.usuario.findFirst({
           where: {
-            id: supervisorId,
+            id: normalizedSupervisorId,
             orgId: session.orgId,
           },
           select: { id: true },
@@ -151,7 +170,7 @@ export async function PATCH(
           );
         }
 
-        dataToUpdate.supervisorId = supervisorId;
+        dataToUpdate.supervisorId = normalizedSupervisorId;
       }
     }
     if (permissoes !== undefined) dataToUpdate.permissoes = permissoes;
@@ -182,6 +201,28 @@ export async function PATCH(
     console.error('Erro ao atualizar usuário:', error);
     if (error.message === 'Não autenticado') {
       return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
+    }
+
+    const prismaCode =
+      error && typeof error === 'object' && 'code' in error ? (error as any).code : undefined;
+
+    if (prismaCode === 'P2002') {
+      return NextResponse.json(
+        { error: 'Email já cadastrado' },
+        { status: 400 }
+      );
+    }
+    if (prismaCode === 'P2025') {
+      return NextResponse.json(
+        { error: 'Usuário não encontrado' },
+        { status: 404 }
+      );
+    }
+    if (prismaCode === 'P2003') {
+      return NextResponse.json(
+        { error: 'Dados inválidos' },
+        { status: 400 }
+      );
     }
 
     if (error instanceof Prisma.PrismaClientKnownRequestError) {
