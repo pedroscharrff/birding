@@ -12,7 +12,7 @@ interface Pagamento {
   id: string
   descricao: string
   valor: number
-  moeda: string
+  moeda?: string
   dataVencimento: Date
   dataPagamento?: Date | null
   status: string
@@ -22,6 +22,10 @@ interface Pagamento {
   comprovanteUrl?: string | null
   fornecedorId?: string | null
   observacoes?: string | null
+  fornecedor?: {
+    id: string
+    nomeFantasia: string
+  } | null
 }
 
 interface PagamentoFormProps {
