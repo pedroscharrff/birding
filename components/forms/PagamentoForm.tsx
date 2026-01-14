@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Label } from '@/components/ui/label'
@@ -8,18 +8,36 @@ import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
 
+interface Pagamento {
+  id: string
+  descricao: string
+  valor: number
+  moeda: string
+  dataVencimento: Date
+  dataPagamento?: Date | null
+  status: string
+  percentualParcial?: number | null
+  formaPagamento?: string | null
+  referencia?: string | null
+  comprovanteUrl?: string | null
+  fornecedorId?: string | null
+  observacoes?: string | null
+}
+
 interface PagamentoFormProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   osId: string
   tipo: 'entrada' | 'saida'
   fornecedores?: Array<{ id: string; nomeFantasia: string }>
+  pagamento?: Pagamento | null
   onSuccess?: () => void
 }
 
-export function PagamentoForm({ open, onOpenChange, osId, tipo, fornecedores = [], onSuccess }: PagamentoFormProps) {
+export function PagamentoForm({ open, onOpenChange, osId, tipo, fornecedores = [], pagamento, onSuccess }: PagamentoFormProps) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const isEditing = !!pagamento
 
   const [formData, setFormData] = useState({
     descricao: '',
@@ -28,12 +46,48 @@ export function PagamentoForm({ open, onOpenChange, osId, tipo, fornecedores = [
     dataVencimento: '',
     dataPagamento: '',
     status: 'pendente',
+    percentualParcial: '',
     formaPagamento: '',
     referencia: '',
     comprovanteUrl: '',
     fornecedorId: '',
     observacoes: '',
   })
+
+  // Preencher formulário quando estiver editando
+  useEffect(() => {
+    if (pagamento) {
+      setFormData({
+        descricao: pagamento.descricao || '',
+        valor: pagamento.valor?.toString() || '',
+        moeda: pagamento.moeda || 'BRL',
+        dataVencimento: pagamento.dataVencimento ? new Date(pagamento.dataVencimento).toISOString().split('T')[0] : '',
+        dataPagamento: pagamento.dataPagamento ? new Date(pagamento.dataPagamento).toISOString().split('T')[0] : '',
+        status: pagamento.status || 'pendente',
+        percentualParcial: pagamento.percentualParcial?.toString() || '',
+        formaPagamento: pagamento.formaPagamento || '',
+        referencia: pagamento.referencia || '',
+        comprovanteUrl: pagamento.comprovanteUrl || '',
+        fornecedorId: pagamento.fornecedorId || '',
+        observacoes: pagamento.observacoes || '',
+      })
+    } else {
+      setFormData({
+        descricao: '',
+        valor: '',
+        moeda: 'BRL',
+        dataVencimento: '',
+        dataPagamento: '',
+        status: 'pendente',
+        percentualParcial: '',
+        formaPagamento: '',
+        referencia: '',
+        comprovanteUrl: '',
+        fornecedorId: '',
+        observacoes: '',
+      })
+    }
+  }, [pagamento])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -42,7 +96,6 @@ export function PagamentoForm({ open, onOpenChange, osId, tipo, fornecedores = [
 
     try {
       const payload: any = {
-        tipo,
         descricao: formData.descricao,
         valor: parseFloat(formData.valor),
         moeda: formData.moeda,
@@ -50,8 +103,16 @@ export function PagamentoForm({ open, onOpenChange, osId, tipo, fornecedores = [
         status: formData.status,
       }
 
+      // Adicionar tipo apenas se estiver criando
+      if (!isEditing) {
+        payload.tipo = tipo
+      }
+
       if (formData.dataPagamento) {
         payload.dataPagamento = formData.dataPagamento
+      }
+      if (formData.percentualParcial) {
+        payload.percentualParcial = parseFloat(formData.percentualParcial)
       }
       if (formData.formaPagamento) {
         payload.formaPagamento = formData.formaPagamento
@@ -69,8 +130,13 @@ export function PagamentoForm({ open, onOpenChange, osId, tipo, fornecedores = [
         payload.observacoes = formData.observacoes
       }
 
-      const response = await fetch(`/api/os/${osId}/pagamentos`, {
-        method: 'POST',
+      const url = isEditing
+        ? `/api/os/${osId}/pagamentos/${pagamento.id}`
+        : `/api/os/${osId}/pagamentos`
+      const method = isEditing ? 'PUT' : 'POST'
+
+      const response = await fetch(url, {
+        method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       })
@@ -82,19 +148,22 @@ export function PagamentoForm({ open, onOpenChange, osId, tipo, fornecedores = [
       }
 
       // Reset form
-      setFormData({
-        descricao: '',
-        valor: '',
-        moeda: 'BRL',
-        dataVencimento: '',
-        dataPagamento: '',
-        status: 'pendente',
-        formaPagamento: '',
-        referencia: '',
-        comprovanteUrl: '',
-        fornecedorId: '',
-        observacoes: '',
-      })
+      if (!isEditing) {
+        setFormData({
+          descricao: '',
+          valor: '',
+          moeda: 'BRL',
+          dataVencimento: '',
+          dataPagamento: '',
+          status: 'pendente',
+          percentualParcial: '',
+          formaPagamento: '',
+          referencia: '',
+          comprovanteUrl: '',
+          fornecedorId: '',
+          observacoes: '',
+        })
+      }
 
       onOpenChange(false)
       if (onSuccess) onSuccess()
@@ -110,12 +179,16 @@ export function PagamentoForm({ open, onOpenChange, osId, tipo, fornecedores = [
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
-            {tipo === 'entrada' ? 'Adicionar Recebimento' : 'Adicionar Pagamento'}
+            {isEditing
+              ? (tipo === 'entrada' ? 'Editar Recebimento' : 'Editar Pagamento')
+              : (tipo === 'entrada' ? 'Adicionar Recebimento' : 'Adicionar Pagamento')}
           </DialogTitle>
           <DialogDescription>
-            {tipo === 'entrada'
-              ? 'Cadastre uma parcela ou recebimento do cliente'
-              : 'Cadastre um pagamento a fornecedor'}
+            {isEditing
+              ? 'Edite as informações do pagamento'
+              : (tipo === 'entrada'
+                  ? 'Cadastre uma parcela ou recebimento do cliente'
+                  : 'Cadastre um pagamento a fornecedor')}
           </DialogDescription>
         </DialogHeader>
 
@@ -197,6 +270,27 @@ export function PagamentoForm({ open, onOpenChange, osId, tipo, fornecedores = [
                 </SelectContent>
               </Select>
             </div>
+
+            {formData.status === 'parcial' && (
+              <div>
+                <Label htmlFor="percentualParcial">
+                  Percentual do Pagamento (%)
+                </Label>
+                <Input
+                  id="percentualParcial"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  max="100"
+                  placeholder="Ex: 30 para 30%"
+                  value={formData.percentualParcial}
+                  onChange={(e) => setFormData({ ...formData, percentualParcial: e.target.value })}
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  Informe a porcentagem que este pagamento representa do total
+                </p>
+              </div>
+            )}
 
             <div>
               <Label htmlFor="dataPagamento">Data de Pagamento</Label>
@@ -283,7 +377,7 @@ export function PagamentoForm({ open, onOpenChange, osId, tipo, fornecedores = [
               Cancelar
             </Button>
             <Button type="submit" disabled={loading}>
-              {loading ? 'Salvando...' : 'Salvar'}
+              {loading ? 'Salvando...' : (isEditing ? 'Atualizar' : 'Salvar')}
             </Button>
           </DialogFooter>
         </form>

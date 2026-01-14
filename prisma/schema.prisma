@@ -666,6 +666,9 @@ model PagamentoOS {
 
   // Status
   status          StatusPagamento @default(pendente)
+  
+  // Percentual do pagamento (usado quando status = 'parcial')
+  percentualParcial Decimal?      @map("percentual_parcial") @db.Decimal(5, 2) // Ex: 30.00 para 30%
 
   // Detalhes do pagamento
   formaPagamento  String?         @map("forma_pagamento") // pix, cartao_credito, boleto, dinheiro, transferencia

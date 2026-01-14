@@ -30,6 +30,22 @@ export interface StatusTransitionValidation {
   recommendedChecklist: ChecklistItem[]
   canProceed: boolean
   blockers: string[]
+  checks: Array<{
+    id: string
+    categoria: string
+    descricao: string
+    status: 'ok' | 'blocker' | 'warning'
+    obrigatorio: boolean
+    detalhes?: string
+  }>
+  warnings: Array<{
+    id: string
+    categoria: string
+    descricao: string
+    status: 'ok' | 'blocker' | 'warning'
+    obrigatorio: boolean
+    detalhes?: string
+  }>
 }
 
 // Checklists por transição de status

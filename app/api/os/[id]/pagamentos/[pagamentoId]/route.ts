@@ -14,6 +14,7 @@ const updatePagamentoSchema = z.object({
   dataVencimento: z.string().optional(),
   dataPagamento: z.string().optional().nullable(),
   status: z.enum(['pendente', 'parcial', 'pago', 'atrasado', 'cancelado']).optional(),
+  percentualParcial: z.number().min(0).max(100).optional().nullable(),
   formaPagamento: z.string().optional().nullable(),
   referencia: z.string().optional().nullable(),
   comprovanteUrl: z.string().optional().nullable(),
@@ -74,6 +75,11 @@ export async function PUT(
     }
     if (validatedData.status !== undefined) {
       updateData.status = validatedData.status
+    }
+    if (validatedData.percentualParcial !== undefined) {
+      updateData.percentualParcial = validatedData.percentualParcial !== null
+        ? new Decimal(validatedData.percentualParcial)
+        : null
     }
     if (validatedData.formaPagamento !== undefined) {
       updateData.formaPagamento = validatedData.formaPagamento

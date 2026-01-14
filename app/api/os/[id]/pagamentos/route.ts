@@ -16,6 +16,7 @@ const createPagamentoSchema = z.object({
   }),
   dataPagamento: z.string().optional().nullable(),
   status: z.enum(['pendente', 'parcial', 'pago', 'atrasado', 'cancelado']).default('pendente'),
+  percentualParcial: z.number().min(0).max(100).optional().nullable(),
   formaPagamento: z.string().optional().nullable(),
   referencia: z.string().optional().nullable(),
   comprovanteUrl: z.string().optional().nullable(),
@@ -132,6 +133,9 @@ export async function POST(
         dataVencimento: new Date(validatedData.dataVencimento),
         dataPagamento: validatedData.dataPagamento ? new Date(validatedData.dataPagamento) : null,
         status: validatedData.status,
+        percentualParcial: validatedData.percentualParcial !== undefined && validatedData.percentualParcial !== null
+          ? new Decimal(validatedData.percentualParcial)
+          : null,
         formaPagamento: validatedData.formaPagamento,
         referencia: validatedData.referencia,
         comprovanteUrl: validatedData.comprovanteUrl,

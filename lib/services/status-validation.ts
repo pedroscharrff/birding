@@ -61,6 +61,8 @@ export async function validateStatusTransition(
       recommendedChecklist: [],
       canProceed: true,
       blockers: [],
+      checks: [],
+      warnings: [],
     }
   }
 
@@ -88,8 +90,34 @@ export async function validateStatusTransition(
   const incompleteRequired = requiredChecklist.filter(item => !item.completed)
   const canProceed = incompleteRequired.length === 0
 
-  // Gerar lista de bloqueadores
-  const blockers = incompleteRequired.map(item => item.label)
+  // Separar em checks, warnings e blockers para o formato esperado pelo modal
+  const checks = requiredChecklist
+    .filter(item => item.completed)
+    .map(item => ({
+      id: item.id,
+      categoria: 'Requisito',
+      descricao: item.label,
+      status: 'ok' as const,
+      obrigatorio: item.required,
+    }))
+
+  const warnings = recommendedChecklist
+    .filter(item => !item.completed)
+    .map(item => ({
+      id: item.id,
+      categoria: 'Recomendado',
+      descricao: item.label,
+      status: 'warning' as const,
+      obrigatorio: false,
+    }))
+
+  const blockers = incompleteRequired.map(item => ({
+    id: item.id,
+    categoria: 'Obrigatório',
+    descricao: item.label,
+    status: 'blocker' as const,
+    obrigatorio: true,
+  }))
 
   return {
     fromStatus,
@@ -97,7 +125,9 @@ export async function validateStatusTransition(
     requiredChecklist,
     recommendedChecklist,
     canProceed,
-    blockers,
+    blockers: blockers.map(b => b.descricao),
+    checks,
+    warnings,
   }
 }
 

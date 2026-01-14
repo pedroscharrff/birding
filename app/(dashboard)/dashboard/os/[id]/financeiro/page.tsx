@@ -64,14 +64,20 @@ interface Pagamento {
   id: string
   descricao: string
   valor: number
+  moeda?: string
   dataVencimento: Date
-  dataPagamento?: Date
+  dataPagamento?: Date | null
   status: string
-  formaPagamento?: string
+  percentualParcial?: number | null
+  formaPagamento?: string | null
+  referencia?: string | null
+  comprovanteUrl?: string | null
+  observacoes?: string | null
   fornecedor?: {
     id: string
     nomeFantasia: string
-  }
+  } | null
+  fornecedorId?: string | null
 }
 
 interface PagamentosData {
@@ -131,6 +137,8 @@ export default function OSFinanceiroPage() {
   const [error, setError] = useState<string | null>(null)
   const [showRecebimentoForm, setShowRecebimentoForm] = useState(false)
   const [showPagamentoForm, setShowPagamentoForm] = useState(false)
+  const [editingRecebimento, setEditingRecebimento] = useState<Pagamento | null>(null)
+  const [editingPagamentoSaida, setEditingPagamentoSaida] = useState<Pagamento | null>(null)
   const [fornecedores, setFornecedores] = useState<Array<{ id: string; nomeFantasia: string }>>([])
   const [editingPagamento, setEditingPagamento] = useState<string | null>(null)
   const [despesas, setDespesas] = useState<DespesaItem[]>([])
@@ -613,6 +621,7 @@ export default function OSFinanceiroPage() {
                       <p className="text-sm text-gray-500">
                         Venc: {format(new Date(pag.dataVencimento), 'dd/MM/yyyy', { locale: ptBR })}
                         {pag.dataPagamento && ` • Pago: ${format(new Date(pag.dataPagamento), 'dd/MM/yyyy', { locale: ptBR })}`}
+                        {pag.status === 'parcial' && pag.percentualParcial && ` • ${pag.percentualParcial}%`}
                       </p>
                     </div>
                   </div>
@@ -628,7 +637,19 @@ export default function OSFinanceiroPage() {
                       <Button
                         size="sm"
                         variant="ghost"
+                        onClick={() => {
+                          setEditingRecebimento(pag)
+                          setShowRecebimentoForm(true)
+                        }}
+                        title="Editar recebimento"
+                      >
+                        <Edit className="h-4 w-4 text-blue-600" />
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
                         onClick={() => handleDeletePagamento(pag.id)}
+                        title="Excluir recebimento"
                       >
                         <Trash2 className="h-4 w-4 text-red-600" />
                       </Button>
@@ -695,7 +716,19 @@ export default function OSFinanceiroPage() {
                       <Button
                         size="sm"
                         variant="ghost"
+                        onClick={() => {
+                          setEditingPagamentoSaida(pag)
+                          setShowPagamentoForm(true)
+                        }}
+                        title="Editar pagamento"
+                      >
+                        <Edit className="h-4 w-4 text-blue-600" />
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
                         onClick={() => handleDeletePagamento(pag.id)}
+                        title="Excluir pagamento"
                       >
                         <Trash2 className="h-4 w-4 text-red-600" />
                       </Button>
@@ -711,18 +744,26 @@ export default function OSFinanceiroPage() {
       {/* Formulários */}
       <PagamentoForm
         open={showRecebimentoForm}
-        onOpenChange={setShowRecebimentoForm}
+        onOpenChange={(open) => {
+          setShowRecebimentoForm(open)
+          if (!open) setEditingRecebimento(null)
+        }}
         osId={osId}
         tipo="entrada"
+        pagamento={editingRecebimento}
         onSuccess={loadData}
       />
 
       <PagamentoForm
         open={showPagamentoForm}
-        onOpenChange={setShowPagamentoForm}
+        onOpenChange={(open) => {
+          setShowPagamentoForm(open)
+          if (!open) setEditingPagamentoSaida(null)
+        }}
         osId={osId}
         tipo="saida"
         fornecedores={fornecedores}
+        pagamento={editingPagamentoSaida}
         onSuccess={loadData}
       />
 
