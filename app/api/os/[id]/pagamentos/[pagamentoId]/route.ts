@@ -3,6 +3,7 @@ import { requireAuth } from '@/lib/auth/session'
 import { prisma } from '@/lib/db/prisma'
 import { atualizarValorRecebidoOS } from '@/lib/services/os-financeiro'
 import { logAuditoria } from '@/lib/services/auditoria'
+import { alertsCache } from '@/lib/cache/alerts-cache'
 import { z } from 'zod'
 import { Decimal } from '@prisma/client/runtime/library'
 
@@ -131,6 +132,10 @@ export async function PUT(
       console.error('[Auditoria] Erro ao registrar log:', auditError)
     }
 
+    // Invalidar cache de alertas (pagamentos atualizados podem remover alertas)
+    alertsCache.invalidate(session.orgId)
+    console.log('[Cache] Cache de alertas invalidado após atualizar pagamento')
+
     return NextResponse.json({
       success: true,
       data: pagamento,
@@ -215,6 +220,10 @@ export async function DELETE(
     } catch (auditError) {
       console.error('[Auditoria] Erro ao registrar log:', auditError)
     }
+
+    // Invalidar cache de alertas (pagamentos excluídos podem remover alertas)
+    alertsCache.invalidate(session.orgId)
+    console.log('[Cache] Cache de alertas invalidado após excluir pagamento')
 
     return NextResponse.json({
       success: true,

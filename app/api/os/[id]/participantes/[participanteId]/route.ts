@@ -3,6 +3,7 @@ import { prisma } from '@/lib/db/prisma'
 import { requireAuth } from '@/lib/auth/session'
 import { updateParticipanteSchema } from '@/lib/validators/participante'
 import { logAuditoria } from '@/lib/services/auditoria'
+import { alertsCache } from '@/lib/cache/alerts-cache'
 
 // PATCH /api/os/[id]/participantes/[participanteId] - Atualizar participante
 export async function PATCH(
@@ -76,6 +77,10 @@ export async function PATCH(
     } catch (auditError) {
       console.error('[Auditoria] Erro ao registrar log:', auditError)
     }
+
+    // Invalidar cache de alertas (passaportes vencidos geram alertas)
+    alertsCache.invalidate(session.orgId)
+    console.log('[Cache] Cache de alertas invalidado após atualizar participante')
 
     return NextResponse.json({
       success: true,
@@ -167,6 +172,10 @@ export async function DELETE(
     } catch (auditError) {
       console.error('[Auditoria] Erro ao registrar log:', auditError)
     }
+
+    // Invalidar cache de alertas (passaportes vencidos geram alertas)
+    alertsCache.invalidate(session.orgId)
+    console.log('[Cache] Cache de alertas invalidado após deletar participante')
 
     return NextResponse.json({
       success: true,

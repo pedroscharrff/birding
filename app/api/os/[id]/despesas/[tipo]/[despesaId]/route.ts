@@ -3,6 +3,7 @@ import { requireAuth } from '@/lib/auth/session'
 import { prisma } from '@/lib/db/prisma'
 import { atualizarStatusPagamentoDespesa } from '@/lib/services/despesas'
 import { logAuditoria } from '@/lib/services/auditoria'
+import { alertsCache } from '@/lib/cache/alerts-cache'
 import { z } from 'zod'
 import { Prisma } from '@prisma/client'
 
@@ -139,6 +140,10 @@ export async function PATCH(
     } catch (auditError) {
       console.error('[Auditoria] Erro ao registrar log:', auditError)
     }
+
+    // Invalidar cache de alertas (despesas pagas removem alertas)
+    alertsCache.invalidate(session.orgId)
+    console.log('[Cache] Cache de alertas invalidado após atualizar despesa')
 
     return NextResponse.json({
       success: true,
