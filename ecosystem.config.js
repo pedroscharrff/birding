@@ -16,6 +16,8 @@ module.exports = {
     merge_logs: true,
     autorestart: true,
     watch: false,
-    max_memory_restart: '1G'
+    max_memory_restart: '1G',
+    max_restarts: 10,
+    min_uptime: '10s'
   }]
 };
