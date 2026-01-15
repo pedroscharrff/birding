@@ -122,6 +122,7 @@ export function buildOSDataFromCotacao(options: ConversaoOSOptions) {
     })
 
   const atividadesData: Prisma.AtividadeCreateWithoutOsInput[] = cotacao.atividades.map(item => ({
+    tipo: "atividade",
     nome: item.descricao,
     valor: new Prisma.Decimal(item.subtotal),
     moeda: item.moeda as "BRL" | "USD" | "EUR",
@@ -151,6 +152,7 @@ export function buildOSDataFromCotacao(options: ConversaoOSOptions) {
   cotacao.alimentacoes.forEach(item => {
     if (item.fornecedorId) {
       atividadesData.push({
+        tipo: "alimentacao",
         nome: `Alimentação: ${item.descricao}`,
         valor: new Prisma.Decimal(item.subtotal),
         moeda: item.moeda as "BRL" | "USD" | "EUR",
@@ -164,6 +166,7 @@ export function buildOSDataFromCotacao(options: ConversaoOSOptions) {
     } else {
       warnings.push(`Alimentação "${item.descricao}" não possui fornecedor vinculado e será adicionada como atividade sem fornecedor`)
       atividadesData.push({
+        tipo: "alimentacao",
         nome: `Alimentação: ${item.descricao}`,
         valor: new Prisma.Decimal(item.subtotal),
         moeda: item.moeda as "BRL" | "USD" | "EUR",

@@ -265,7 +265,7 @@ export default function OSDetalhesPage() {
         </TabsContent>
 
         <TabsContent value="atividades" className="space-y-4">
-          <OSAtividadesSection osId={osId} atividades={os.atividades.filter((a: any) => a.tipo === 'atividade' || !a.tipo)} onUpdate={() => {}} />
+          <OSAtividadesSection osId={osId} atividades={os.atividades.filter((a: any) => a.tipo === 'atividade')} onUpdate={() => {}} />
         </TabsContent>
 
         <TabsContent value="alimentacao" className="space-y-4">
