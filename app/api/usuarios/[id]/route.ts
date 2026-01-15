@@ -65,7 +65,7 @@ export async function PATCH(
     const session = await requireAuth();
 
     // Apenas administradores podem editar usuários
-    if (session.roleGlobal !== 'ADMINISTRADOR') {
+    if (session.roleGlobal !== 'admin') {
       return NextResponse.json(
         { error: 'Apenas administradores podem editar usuários' },
         { status: 403 }
@@ -269,7 +269,7 @@ export async function DELETE(
     const session = await requireAuth();
 
     // Apenas administradores podem excluir usuários
-    if (session.roleGlobal !== 'ADMINISTRADOR') {
+    if (session.roleGlobal !== 'admin') {
       return NextResponse.json(
         { error: 'Apenas administradores podem excluir usuários' },
         { status: 403 }

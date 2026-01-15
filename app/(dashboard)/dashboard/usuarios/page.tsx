@@ -7,6 +7,7 @@ import UsuarioFormDialog from '@/components/usuarios/UsuarioFormDialog';
 import PermissoesDialog from '@/components/usuarios/PermissoesDialog';
 import { RoleGlobal } from '@prisma/client';
 import { UserPermissions } from '@/types/permissions';
+import { useAuth } from '@/app/providers/AuthProvider';
 
 interface Usuario {
   id: string;
@@ -24,6 +25,7 @@ interface Usuario {
 }
 
 export default function UsuariosPage() {
+  const { user } = useAuth();
   const [usuarios, setUsuarios] = useState<Usuario[]>([]);
   const [filteredUsuarios, setFilteredUsuarios] = useState<Usuario[]>([]);
   const [loading, setLoading] = useState(true);
@@ -33,6 +35,8 @@ export default function UsuariosPage() {
   const [showForm, setShowForm] = useState(false);
   const [showPermissions, setShowPermissions] = useState(false);
   const [selectedUsuario, setSelectedUsuario] = useState<Usuario | null>(null);
+  
+  const isAdmin = user?.roleGlobal === 'admin';
 
   useEffect(() => {
     fetchUsuarios();
@@ -238,16 +242,18 @@ export default function UsuariosPage() {
             Gerencie usuários, funções e permissões do sistema
           </p>
         </div>
-        <button
-          onClick={() => {
-            setSelectedUsuario(null);
-            setShowForm(true);
-          }}
-          className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-        >
-          <UserPlus className="h-5 w-5" />
-          Novo Usuário
-        </button>
+        {isAdmin && (
+          <button
+            onClick={() => {
+              setSelectedUsuario(null);
+              setShowForm(true);
+            }}
+            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+          >
+            <UserPlus className="h-5 w-5" />
+            Novo Usuário
+          </button>
+        )}
       </div>
 
       <div className="bg-white rounded-lg shadow">
@@ -324,6 +330,7 @@ export default function UsuariosPage() {
           onDelete={handleDeleteUsuario}
           onToggleStatus={handleToggleStatus}
           onManagePermissions={handleManagePermissions}
+          isAdmin={isAdmin}
         />
       </div>
 

@@ -87,7 +87,7 @@ export async function POST(request: NextRequest) {
     const session = await requireAuth();
 
     // Apenas administradores podem criar usuários
-    if (session.roleGlobal !== 'ADMINISTRADOR') {
+    if (session.roleGlobal !== 'admin') {
       return NextResponse.json(
         { error: 'Apenas administradores podem criar usuários' },
         { status: 403 }

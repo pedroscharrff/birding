@@ -24,6 +24,7 @@ interface UsuariosTableProps {
   onDelete: (id: string) => void;
   onToggleStatus: (id: string, ativo: boolean) => void;
   onManagePermissions: (usuario: Usuario) => void;
+  isAdmin?: boolean;
 }
 
 const ROLE_LABELS: Record<RoleGlobal, string> = {
@@ -50,6 +51,7 @@ export default function UsuariosTable({
   onDelete,
   onToggleStatus,
   onManagePermissions,
+  isAdmin = false,
 }: UsuariosTableProps) {
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
 
@@ -144,50 +146,57 @@ export default function UsuariosTable({
               </td>
               <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                 <div className="flex items-center justify-end gap-2">
-                  <button
-                    onClick={() => onManagePermissions(usuario)}
-                    className="text-purple-600 hover:text-purple-900"
-                    title="Gerenciar Permissões"
-                  >
-                    <Shield className="h-4 w-4" />
-                  </button>
-                  <button
-                    onClick={() => onToggleStatus(usuario.id, !usuario.ativo)}
-                    className={`${
-                      usuario.ativo
-                        ? 'text-orange-600 hover:text-orange-900'
-                        : 'text-green-600 hover:text-green-900'
-                    }`}
-                    title={usuario.ativo ? 'Desativar' : 'Ativar'}
-                  >
-                    {usuario.ativo ? (
-                      <UserX className="h-4 w-4" />
-                    ) : (
-                      <UserCheck className="h-4 w-4" />
-                    )}
-                  </button>
-                  <button
-                    onClick={() => onEdit(usuario)}
-                    className="text-blue-600 hover:text-blue-900"
-                    title="Editar"
-                  >
-                    <Pencil className="h-4 w-4" />
-                  </button>
-                  <button
-                    onClick={() => handleDelete(usuario.id)}
-                    className={`${
-                      confirmDelete === usuario.id
-                        ? 'text-red-900 font-bold'
-                        : 'text-red-600 hover:text-red-900'
-                    }`}
-                    title={
-                      confirmDelete === usuario.id
-                        ? 'Clique novamente para confirmar'
-                        : 'Excluir'
-                    }
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </button>
+                  {isAdmin && (
+                    <>
+                      <button
+                        onClick={() => onManagePermissions(usuario)}
+                        className="text-purple-600 hover:text-purple-900"
+                        title="Gerenciar Permissões"
+                      >
+                        <Shield className="h-4 w-4" />
+                      </button>
+                      <button
+                        onClick={() => onToggleStatus(usuario.id, !usuario.ativo)}
+                        className={`${
+                          usuario.ativo
+                            ? 'text-orange-600 hover:text-orange-900'
+                            : 'text-green-600 hover:text-green-900'
+                        }`}
+                        title={usuario.ativo ? 'Desativar' : 'Ativar'}
+                      >
+                        {usuario.ativo ? (
+                          <UserX className="h-4 w-4" />
+                        ) : (
+                          <UserCheck className="h-4 w-4" />
+                        )}
+                      </button>
+                      <button
+                        onClick={() => onEdit(usuario)}
+                        className="text-blue-600 hover:text-blue-900"
+                        title="Editar"
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </button>
+                      <button
+                        onClick={() => handleDelete(usuario.id)}
+                        className={`${
+                          confirmDelete === usuario.id
+                            ? 'text-red-900 font-bold'
+                            : 'text-red-600 hover:text-red-900'
+                        }`}
+                        title={
+                          confirmDelete === usuario.id
+                            ? 'Clique novamente para confirmar'
+                            : 'Excluir'
+                        }
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </>
+                  )}
+                  {!isAdmin && (
+                    <span className="text-gray-400 text-xs">Sem permissão</span>
+                  )}
                 </div>
               </td>
             </tr>
