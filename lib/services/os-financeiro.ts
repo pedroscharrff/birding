@@ -196,7 +196,8 @@ export async function obterPagamentosOS(osId: string): Promise<PagamentosResumo>
         dataVencimento: p.dataVencimento,
         dataPagamento: p.dataPagamento || undefined,
         status: p.status,
-        formaPagamento: p.formaPagamento || undefined
+        formaPagamento: p.formaPagamento || undefined,
+        comprovanteUrl: p.comprovanteUrl || undefined
       }))
     },
     saidas: {
@@ -210,7 +211,8 @@ export async function obterPagamentosOS(osId: string): Promise<PagamentosResumo>
         dataVencimento: p.dataVencimento,
         dataPagamento: p.dataPagamento || undefined,
         status: p.status,
-        fornecedor: p.fornecedor || undefined
+        fornecedor: p.fornecedor || undefined,
+        comprovanteUrl: p.comprovanteUrl || undefined
       }))
     }
   }

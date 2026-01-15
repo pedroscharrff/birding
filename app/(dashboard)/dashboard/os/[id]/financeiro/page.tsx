@@ -7,7 +7,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { ErrorMessage } from '@/components/ui/error-message'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Plus, TrendingUp, TrendingDown, DollarSign, Calendar, CheckCircle, AlertCircle, Clock, Edit, Trash2 } from 'lucide-react'
+import { Plus, TrendingUp, TrendingDown, DollarSign, Calendar, CheckCircle, AlertCircle, Clock, Edit, Trash2, FileText, ExternalLink } from 'lucide-react'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { PagamentoForm } from '@/components/forms/PagamentoForm'
@@ -107,6 +107,7 @@ interface DespesaItem {
   formaPagamento: string | null
   referenciaPagamento: string | null
   dataReferencia: Date | null
+  arquivos?: any
 }
 
 interface DespesasResponse {
@@ -508,6 +509,16 @@ export default function OSFinanceiroPage() {
                         <p className="font-semibold">{formatCurrency(d.valor)}</p>
                       </div>
                       {getStatusBadge(d.statusPagamento)}
+                      {d.arquivos && Array.isArray(d.arquivos) && d.arquivos.length > 0 && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => window.open(d.arquivos[0].url, '_blank')}
+                          title={`Ver arquivo (${d.arquivos.length} arquivo${d.arquivos.length > 1 ? 's' : ''})`}
+                        >
+                          <FileText className="h-4 w-4 text-blue-600" />
+                        </Button>
+                      )}
                       {d.statusPagamento !== 'pago' && (
                         <Button size="sm" onClick={() => { setSelectedDespesa(d); setShowDespesaDialog(true) }}>
                           Marcar como Pago
@@ -561,6 +572,16 @@ export default function OSFinanceiroPage() {
                                   <p className="font-semibold">{formatCurrency(d.valor)}</p>
                                 </div>
                                 {getStatusBadge(d.statusPagamento)}
+                                {d.arquivos && Array.isArray(d.arquivos) && d.arquivos.length > 0 && (
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => window.open(d.arquivos[0].url, '_blank')}
+                                    title={`Ver arquivo (${d.arquivos.length} arquivo${d.arquivos.length > 1 ? 's' : ''})`}
+                                  >
+                                    <FileText className="h-4 w-4 text-blue-600" />
+                                  </Button>
+                                )}
                                 {d.statusPagamento !== 'pago' && (
                                   <Button size="sm" onClick={() => { setSelectedDespesa(d); setShowDespesaDialog(true) }}>
                                     Marcar como Pago
@@ -634,6 +655,16 @@ export default function OSFinanceiroPage() {
                     </div>
                     {getStatusBadge(pag.status)}
                     <div className="flex gap-1">
+                      {pag.comprovanteUrl && (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => window.open(pag.comprovanteUrl!, '_blank')}
+                          title="Ver comprovante"
+                        >
+                          <FileText className="h-4 w-4 text-green-600" />
+                        </Button>
+                      )}
                       <Button
                         size="sm"
                         variant="ghost"
@@ -713,6 +744,16 @@ export default function OSFinanceiroPage() {
                     </div>
                     {getStatusBadge(pag.status)}
                     <div className="flex gap-1">
+                      {pag.comprovanteUrl && (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => window.open(pag.comprovanteUrl!, '_blank')}
+                          title="Ver comprovante"
+                        >
+                          <FileText className="h-4 w-4 text-green-600" />
+                        </Button>
+                      )}
                       <Button
                         size="sm"
                         variant="ghost"

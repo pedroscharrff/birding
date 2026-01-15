@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
+import { Upload, FileText, X } from 'lucide-react'
 
 interface Pagamento {
   id: string
@@ -41,6 +42,8 @@ interface PagamentoFormProps {
 export function PagamentoForm({ open, onOpenChange, osId, tipo, fornecedores = [], pagamento, onSuccess }: PagamentoFormProps) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [uploadingFile, setUploadingFile] = useState(false)
+  const [uploadedFileUrl, setUploadedFileUrl] = useState<string | null>(null)
   const isEditing = !!pagamento
 
   const [formData, setFormData] = useState({
@@ -75,6 +78,7 @@ export function PagamentoForm({ open, onOpenChange, osId, tipo, fornecedores = [
         fornecedorId: pagamento.fornecedorId || '',
         observacoes: pagamento.observacoes || '',
       })
+      setUploadedFileUrl(pagamento.comprovanteUrl || null)
     } else {
       setFormData({
         descricao: '',
@@ -90,6 +94,7 @@ export function PagamentoForm({ open, onOpenChange, osId, tipo, fornecedores = [
         fornecedorId: '',
         observacoes: '',
       })
+      setUploadedFileUrl(null)
     }
   }, [pagamento])
 
@@ -124,7 +129,9 @@ export function PagamentoForm({ open, onOpenChange, osId, tipo, fornecedores = [
       if (formData.referencia) {
         payload.referencia = formData.referencia
       }
-      if (formData.comprovanteUrl) {
+      if (uploadedFileUrl) {
+        payload.comprovanteUrl = uploadedFileUrl
+      } else if (formData.comprovanteUrl) {
         payload.comprovanteUrl = formData.comprovanteUrl
       }
       if (formData.fornecedorId) {
@@ -167,6 +174,7 @@ export function PagamentoForm({ open, onOpenChange, osId, tipo, fornecedores = [
           fornecedorId: '',
           observacoes: '',
         })
+        setUploadedFileUrl(null)
       }
 
       onOpenChange(false)
@@ -176,6 +184,49 @@ export function PagamentoForm({ open, onOpenChange, osId, tipo, fornecedores = [
     } finally {
       setLoading(false)
     }
+  }
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    // Validar tamanho (máximo 10MB)
+    if (file.size > 10 * 1024 * 1024) {
+      setError('Arquivo muito grande. Tamanho máximo: 10MB')
+      return
+    }
+
+    setUploadingFile(true)
+    setError(null)
+
+    try {
+      const formData = new FormData()
+      formData.append('file', file)
+      formData.append('folder', 'pagamentos')
+      formData.append('entityId', osId)
+
+      const response = await fetch('/api/storage/upload', {
+        method: 'POST',
+        body: formData,
+      })
+
+      if (!response.ok) {
+        const data = await response.json()
+        throw new Error(data.error || 'Erro ao fazer upload')
+      }
+
+      const data = await response.json()
+      setUploadedFileUrl(data.file.url)
+    } catch (err: any) {
+      setError(err.message || 'Erro ao fazer upload do arquivo')
+    } finally {
+      setUploadingFile(false)
+    }
+  }
+
+  const handleRemoveFile = () => {
+    setUploadedFileUrl(null)
+    setFormData({ ...formData, comprovanteUrl: '' })
   }
 
   return (
@@ -354,14 +405,58 @@ export function PagamentoForm({ open, onOpenChange, osId, tipo, fornecedores = [
             </div>
 
             <div className="col-span-2">
-              <Label htmlFor="comprovanteUrl">URL do Comprovante</Label>
-              <Input
-                id="comprovanteUrl"
-                type="url"
-                placeholder="https://..."
-                value={formData.comprovanteUrl}
-                onChange={(e) => setFormData({ ...formData, comprovanteUrl: e.target.value })}
-              />
+              <Label htmlFor="comprovante">Comprovante de Pagamento</Label>
+              {uploadedFileUrl ? (
+                <div className="flex items-center gap-2 p-3 bg-gray-50 rounded-lg border border-gray-200">
+                  <FileText className="h-5 w-5 text-gray-600" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-gray-900 truncate">
+                      Comprovante anexado
+                    </p>
+                    <a
+                      href={uploadedFileUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-xs text-blue-600 hover:underline"
+                    >
+                      Visualizar arquivo
+                    </a>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleRemoveFile}
+                    className="text-red-600 hover:text-red-700"
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+              ) : (
+                <div>
+                  <input
+                    id="comprovante"
+                    type="file"
+                    accept="image/*,.pdf,.doc,.docx"
+                    onChange={handleFileUpload}
+                    disabled={uploadingFile}
+                    className="hidden"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => document.getElementById('comprovante')?.click()}
+                    disabled={uploadingFile}
+                    className="w-full"
+                  >
+                    <Upload className="h-4 w-4 mr-2" />
+                    {uploadingFile ? 'Enviando...' : 'Anexar Comprovante'}
+                  </Button>
+                  <p className="text-xs text-gray-500 mt-1">
+                    PDF, imagens ou documentos (máx. 10MB)
+                  </p>
+                </div>
+              )}
             </div>
 
             <div className="col-span-2">

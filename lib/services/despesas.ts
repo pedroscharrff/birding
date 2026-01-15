@@ -19,6 +19,7 @@ export interface DespesaConsolidada {
   formaPagamento: string | null
   referenciaPagamento: string | null
   dataReferencia: Date | null // data da atividade/checkin/partida
+  arquivos?: any // Array de arquivos anexados
 }
 
 /**
@@ -58,7 +59,8 @@ export async function buscarDespesasConsolidadas(osId: string): Promise<DespesaC
       dataPagamento: h.dataPagamento,
       formaPagamento: h.formaPagamento,
       referenciaPagamento: h.referenciaPagamento,
-      dataReferencia: h.checkin
+      dataReferencia: h.checkin,
+      arquivos: h.arquivos
     })
   })
 
@@ -75,7 +77,8 @@ export async function buscarDespesasConsolidadas(osId: string): Promise<DespesaC
       dataPagamento: t.dataPagamento,
       formaPagamento: t.formaPagamento,
       referenciaPagamento: t.referenciaPagamento,
-      dataReferencia: t.dataPartida
+      dataReferencia: t.dataPartida,
+      arquivos: t.arquivos
     })
   })
 
@@ -92,7 +95,8 @@ export async function buscarDespesasConsolidadas(osId: string): Promise<DespesaC
       dataPagamento: a.dataPagamento,
       formaPagamento: a.formaPagamento,
       referenciaPagamento: a.referenciaPagamento,
-      dataReferencia: a.data
+      dataReferencia: a.data,
+      arquivos: a.arquivos
     })
   })
 
@@ -109,7 +113,8 @@ export async function buscarDespesasConsolidadas(osId: string): Promise<DespesaC
       dataPagamento: p.dataPagamento,
       formaPagamento: p.formaPagamento,
       referenciaPagamento: p.referenciaPagamento,
-      dataReferencia: p.dataPartida
+      dataReferencia: p.dataPartida,
+      arquivos: p.arquivos
     })
   })
 
