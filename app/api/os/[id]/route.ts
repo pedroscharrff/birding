@@ -83,6 +83,7 @@ export async function GET(
         atividades: {
           select: {
             id: true,
+            tipo: true,
             nome: true,
             valor: true,
             moeda: true,

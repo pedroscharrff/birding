@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
-import { Plus, Utensils, Calendar, Clock, DollarSign, MapPin } from 'lucide-react'
+import { Plus, Utensils, MapPin, Calendar, Clock, DollarSign, Edit2, Trash2 } from 'lucide-react'
 import { useToast } from '@/hooks/useToast'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
@@ -37,6 +37,7 @@ interface OSAlimentacaoSectionProps {
 export function OSAlimentacaoSection({ osId, alimentacoes, onUpdate }: OSAlimentacaoSectionProps) {
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [editingAlimentacao, setEditingAlimentacao] = useState<Alimentacao | null>(null)
   const { toast } = useToast()
 
   const [formData, setFormData] = useState({
@@ -90,8 +91,13 @@ export function OSAlimentacaoSection({ osId, alimentacoes, onUpdate }: OSAliment
         notas: formData.notas || undefined,
       }
 
-      const res = await fetch(`/api/os/${osId}/atividades`, {
-        method: 'POST',
+      const url = editingAlimentacao
+        ? `/api/os/${osId}/atividades/${editingAlimentacao.id}`
+        : `/api/os/${osId}/atividades`
+      const method = editingAlimentacao ? 'PATCH' : 'POST'
+
+      const res = await fetch(url, {
+        method,
         headers: {
           'Content-Type': 'application/json',
         },
@@ -102,25 +108,74 @@ export function OSAlimentacaoSection({ osId, alimentacoes, onUpdate }: OSAliment
       const data = await res.json()
 
       if (!res.ok || !data.success) {
-        throw new Error(data.error || 'Erro ao adicionar alimentação')
+        throw new Error(data.error || `Erro ao ${editingAlimentacao ? 'atualizar' : 'adicionar'} alimentação`)
       }
 
       toast({
         title: 'Sucesso',
-        description: 'Alimentação adicionada com sucesso',
+        description: `Alimentação ${editingAlimentacao ? 'atualizada' : 'adicionada'} com sucesso`,
       })
 
       resetForm()
       setIsDialogOpen(false)
+      setEditingAlimentacao(null)
       onUpdate()
     } catch (error: any) {
       toast({
         title: 'Erro',
-        description: error.message || 'Erro ao adicionar alimentação',
+        description: error.message || `Erro ao ${editingAlimentacao ? 'atualizar' : 'adicionar'} alimentação`,
         variant: 'destructive',
       })
     } finally {
       setLoading(false)
+    }
+  }
+
+  const handleEditAlimentacao = (alimentacao: Alimentacao) => {
+    setEditingAlimentacao(alimentacao)
+    setFormData({
+      nome: alimentacao.nome,
+      fornecedorId: alimentacao.fornecedor?.id || '',
+      valor: alimentacao.valor?.toString() || '',
+      moeda: alimentacao.moeda,
+      localizacao: alimentacao.localizacao || '',
+      data: alimentacao.data ? alimentacao.data.split('T')[0] : '',
+      hora: alimentacao.hora || '',
+      notas: alimentacao.notas || '',
+      tarifaId: '',
+    })
+    setIsDialogOpen(true)
+  }
+
+  const handleDeleteAlimentacao = async (alimentacaoId: string) => {
+    if (!confirm('Tem certeza que deseja excluir esta alimentação? Esta ação não pode ser desfeita.')) {
+      return
+    }
+
+    try {
+      const res = await fetch(`/api/os/${osId}/atividades/${alimentacaoId}`, {
+        method: 'DELETE',
+        credentials: 'include',
+      })
+
+      const data = await res.json()
+
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || 'Erro ao deletar alimentação')
+      }
+
+      toast({
+        title: 'Sucesso',
+        description: 'Alimentação deletada com sucesso',
+      })
+
+      onUpdate()
+    } catch (error: any) {
+      toast({
+        title: 'Erro',
+        description: error.message || 'Erro ao deletar alimentação',
+        variant: 'destructive',
+      })
     }
   }
 
@@ -161,14 +216,16 @@ export function OSAlimentacaoSection({ osId, alimentacoes, onUpdate }: OSAliment
             </div>
           ) : (
             <div className="space-y-4">
-              {alimentacoes.map((alimentacao) => (
-                <div
-                  key={alimentacao.id}
-                  className="border rounded-lg p-4 hover:bg-gray-50 transition"
-                >
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <h4 className="font-semibold text-lg">{alimentacao.nome}</h4>
+              {alimentacoes.map((alimentacao) => {
+                try {
+                  return (
+                    <div
+                      key={alimentacao.id}
+                      className="border rounded-lg p-4 hover:bg-gray-50 transition"
+                    >
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <h4 className="font-semibold text-lg">{alimentacao.nome}</h4>
                       <div className="mt-2 space-y-1 text-sm text-gray-600">
                         {alimentacao.localizacao && (
                           <div className="flex items-center gap-2">
@@ -209,9 +266,37 @@ export function OSAlimentacaoSection({ osId, alimentacoes, onUpdate }: OSAliment
                         </div>
                       )}
                     </div>
+                    <div className="flex gap-2 ml-4">
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => handleEditAlimentacao(alimentacao)}
+                        title="Editar alimentação"
+                      >
+                        <Edit2 className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => handleDeleteAlimentacao(alimentacao.id)}
+                        title="Excluir alimentação"
+                        className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </div>
                 </div>
-              ))}
+                  )
+                } catch (error) {
+                  console.error('❌ Erro ao renderizar alimentação:', alimentacao, error)
+                  return (
+                    <div key={alimentacao.id} className="border rounded-lg p-4 bg-red-50">
+                      <p className="text-red-600">Erro ao renderizar: {alimentacao.nome}</p>
+                    </div>
+                  )
+                }
+              })}
             </div>
           )}
         </CardContent>
@@ -222,8 +307,8 @@ export function OSAlimentacaoSection({ osId, alimentacoes, onUpdate }: OSAliment
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
             <div className="p-6 border-b sticky top-0 bg-white">
-              <h2 className="text-xl font-semibold">Adicionar Refeição</h2>
-              <p className="text-sm text-gray-600 mt-1">Preencha os dados da refeição</p>
+              <h2 className="text-xl font-semibold">{editingAlimentacao ? 'Editar Refeição' : 'Adicionar Refeição'}</h2>
+              <p className="text-sm text-gray-600 mt-1">{editingAlimentacao ? 'Atualize os dados da refeição' : 'Preencha os dados da refeição'}</p>
             </div>
             <div className="p-6 space-y-4">
               <div>
@@ -323,13 +408,18 @@ export function OSAlimentacaoSection({ osId, alimentacoes, onUpdate }: OSAliment
                 onClick={() => {
                   setIsDialogOpen(false)
                   resetForm()
+                  setEditingAlimentacao(null)
                 }}
                 disabled={loading}
               >
                 Cancelar
               </Button>
               <Button onClick={handleAddAlimentacao} disabled={loading}>
-                {loading ? 'Adicionando...' : 'Adicionar Refeição'}
+                {loading
+                  ? `${editingAlimentacao ? 'Atualizando' : 'Adicionando'}...`
+                  : editingAlimentacao
+                  ? 'Atualizar Refeição'
+                  : 'Adicionar Refeição'}
               </Button>
             </div>
           </div>

@@ -11,7 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useApi } from '@/hooks/useApi'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
-import { ArrowLeft, Edit, Trash2, Users, MapPin, Calendar, Building2, Plane, Truck, DollarSign, FileText, Compass } from 'lucide-react'
+import { ArrowLeft, Edit, Trash2, Users, MapPin, Calendar, Building2, Plane, Truck, DollarSign, FileText, Compass, Utensils } from 'lucide-react'
 import { OSInfoSection } from '@/components/os/OSInfoSection'
 import { OSParticipantesSection } from '@/components/os/OSParticipantesSection'
 import { OSGuiasSection } from '@/components/os/OSGuiasSection'
@@ -192,7 +192,22 @@ export default function OSDetalhesPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{os.atividades.length}</div>
+            <div className="text-2xl font-bold">
+              {os.atividades.filter((a: any) => a.tipo === 'atividade' || !a.tipo).length}
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm font-medium text-gray-600">
+              <Utensils className="h-4 w-4 inline mr-2" />
+              Alimentação
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {os.atividades.filter((a: any) => a.tipo === 'alimentacao').length}
+            </div>
           </CardContent>
         </Card>
         <Card>
@@ -265,11 +280,11 @@ export default function OSDetalhesPage() {
         </TabsContent>
 
         <TabsContent value="atividades" className="space-y-4">
-          <OSAtividadesSection osId={osId} atividades={os.atividades.filter((a: any) => a.tipo === 'atividade')} onUpdate={() => {}} />
+          <OSAtividadesSection osId={osId} atividades={os.atividades.filter((a: any) => a.tipo === 'atividade' || !a.tipo)} onUpdate={refetch} />
         </TabsContent>
 
         <TabsContent value="alimentacao" className="space-y-4">
-          <OSAlimentacaoSection osId={osId} alimentacoes={os.atividades.filter((a: any) => a.tipo === 'alimentacao')} onUpdate={() => {}} />
+          <OSAlimentacaoSection osId={osId} alimentacoes={os.atividades.filter((a: any) => a.tipo === 'alimentacao')} onUpdate={refetch} />
         </TabsContent>
 
         <TabsContent value="financeiro" className="space-y-4">
