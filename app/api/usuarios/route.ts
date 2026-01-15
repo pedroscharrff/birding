@@ -12,6 +12,7 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const ativo = searchParams.get('ativo');
     const roleGlobal = searchParams.get('roleGlobal');
+    const roles = searchParams.get('roles'); // Suporte para múltiplos roles separados por vírgula
     const departamento = searchParams.get('departamento');
     const search = searchParams.get('search');
 
@@ -23,7 +24,11 @@ export async function GET(request: NextRequest) {
       where.ativo = ativo === 'true';
     }
 
-    if (roleGlobal) {
+    // Suporte para filtro por múltiplos roles
+    if (roles) {
+      const rolesArray = roles.split(',').map(r => r.trim());
+      where.roleGlobal = { in: rolesArray };
+    } else if (roleGlobal) {
       where.roleGlobal = roleGlobal;
     }
 
@@ -61,14 +66,17 @@ export async function GET(request: NextRequest) {
       ],
     });
 
-    return NextResponse.json(usuarios);
+    return NextResponse.json({
+      success: true,
+      data: usuarios,
+    });
   } catch (error: any) {
     console.error('Erro ao buscar usuários:', error);
     if (error.message === 'Não autenticado') {
-      return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
+      return NextResponse.json({ success: false, error: 'Não autorizado' }, { status: 401 });
     }
     return NextResponse.json(
-      { error: 'Erro ao buscar usuários' },
+      { success: false, error: 'Erro ao buscar usuários' },
       { status: 500 }
     );
   }
@@ -77,6 +85,14 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const session = await requireAuth();
+
+    // Apenas administradores podem criar usuários
+    if (session.roleGlobal !== 'ADMINISTRADOR') {
+      return NextResponse.json(
+        { error: 'Apenas administradores podem criar usuários' },
+        { status: 403 }
+      );
+    }
 
     const body = await request.json();
     const {

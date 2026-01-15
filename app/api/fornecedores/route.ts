@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { revalidatePath } from 'next/cache'
 import { prisma } from '@/lib/db/prisma'
 import { requireAuth } from '@/lib/auth/session'
 
@@ -95,6 +96,9 @@ export async function POST(request: NextRequest) {
         arquivos: arquivos || null,
       },
     })
+
+    // Revalidar cache para atualizar listas de fornecedores
+    revalidatePath('/dashboard/fornecedores')
 
     return NextResponse.json({
       success: true,

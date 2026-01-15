@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -39,6 +40,7 @@ export function OSHospedagensSection({ osId, hospedagens, onUpdate }: OSHospedag
   const [isBatchDialogOpen, setIsBatchDialogOpen] = useState(false)
   const [loading, setLoading] = useState(false)
   const [editingHospedagem, setEditingHospedagem] = useState<Hospedagem | null>(null)
+  const router = useRouter()
   const { toast } = useToast()
 
   const [formData, setFormData] = useState({
@@ -169,6 +171,7 @@ export function OSHospedagensSection({ osId, hospedagens, onUpdate }: OSHospedag
       resetForm()
       setIsDialogOpen(false)
       setEditingHospedagem(null)
+      router.refresh()
       onUpdate()
     } catch (error: any) {
       toast({

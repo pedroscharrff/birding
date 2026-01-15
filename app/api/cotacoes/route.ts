@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
+import { revalidatePath } from 'next/cache'
 import { requireAuth } from "@/lib/auth/session"
 import { prisma } from "@/lib/db/prisma"
 import { Prisma } from "@prisma/client"
@@ -117,6 +118,9 @@ export async function POST(req: NextRequest) {
         }
       }
     })
+
+    // Revalidar cache para atualizar lista de cotações
+    revalidatePath('/dashboard/cotacoes')
 
     return NextResponse.json({
       success: true,

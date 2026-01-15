@@ -20,6 +20,7 @@ interface OSWithCounts extends OS {
     participantes: number
     atividades: number
     hospedagens: number
+    transportes: number
   }
   agenteResponsavel: {
     id: string

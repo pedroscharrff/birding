@@ -47,11 +47,12 @@ export default function UsuariosPage() {
       setLoading(true);
       const response = await fetch('/api/usuarios');
       if (!response.ok) throw new Error('Erro ao buscar usuários');
-      const data = await response.json();
-      setUsuarios(data);
+      const result = await response.json();
+      setUsuarios(result.data || []);
     } catch (error) {
       console.error('Erro ao buscar usuários:', error);
       alert('Erro ao carregar usuários');
+      setUsuarios([]);
     } finally {
       setLoading(false);
     }

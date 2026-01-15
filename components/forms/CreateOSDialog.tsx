@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { useRouter } from "next/navigation"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
@@ -57,6 +58,7 @@ interface CreateOSDialogProps {
 export function CreateOSDialog({ onSuccess }: CreateOSDialogProps) {
   const [open, setOpen] = useState(false)
   const [loading, setLoading] = useState(false)
+  const router = useRouter()
   const { toast } = useToast()
   const { user } = useAuth()
 
@@ -112,6 +114,7 @@ export function CreateOSDialog({ onSuccess }: CreateOSDialogProps) {
 
       reset()
       setOpen(false)
+      router.refresh()
       onSuccess?.()
     } catch (error: any) {
       toast({

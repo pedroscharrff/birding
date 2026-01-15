@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { revalidatePath } from 'next/cache'
 import { prisma } from '@/lib/db/prisma'
 import { requireAuth } from '@/lib/auth/session'
 import { logAuditoria } from '@/lib/services/auditoria'
@@ -182,6 +183,10 @@ export async function POST(
     // ✅ Invalidar cache de alertas (para atualizar alertas de "OS sem guia")
     alertsCache.invalidate(session.orgId)
     console.log('[Cache] Cache de alertas invalidado após adicionar guia')
+
+    // Revalidar cache para atualizar a lista de guias
+    revalidatePath(`/dashboard/os/${osId}`)
+    revalidatePath('/dashboard/os')
 
     return NextResponse.json(
       {

@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Label } from '@/components/ui/label'
@@ -25,6 +26,7 @@ export function DespesaPagarDialog({ open, onOpenChange, osId, despesa, onSucces
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [comprovantes, setComprovantes] = useState<UploadedFile[]>([])
+  const router = useRouter()
 
   const [formData, setFormData] = useState({
     dataPagamento: '',
@@ -61,6 +63,7 @@ export function DespesaPagarDialog({ open, onOpenChange, osId, despesa, onSucces
       }
 
       onOpenChange(false)
+      router.refresh()
       if (onSuccess) onSuccess()
     } catch (err: any) {
       setError(err.message || 'Erro ao atualizar despesa')

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { revalidatePath } from 'next/cache'
 import { prisma } from '@/lib/db/prisma'
 import { requireAuth } from '@/lib/auth/session'
 import { createOSSchema, listOSQuerySchema } from '@/lib/validators/os'
@@ -90,6 +91,7 @@ export async function GET(request: NextRequest) {
             participantes: true,
             atividades: true,
             hospedagens: true,
+            transportes: true,
           },
         },
       },
@@ -191,6 +193,10 @@ export async function POST(request: NextRequest) {
     } catch (auditError) {
       console.error('[Auditoria] Erro ao registrar log:', auditError)
     }
+
+    // Revalidar cache para atualizar a lista de OS
+    revalidatePath('/dashboard/os')
+    revalidatePath('/dashboard')
 
     return NextResponse.json(
       {

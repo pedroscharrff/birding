@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -37,6 +38,7 @@ export function OSTransportesSection({ osId, transportes, onUpdate }: OSTranspor
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [loading, setLoading] = useState(false)
   const [editingTransporte, setEditingTransporte] = useState<Transporte | null>(null)
+  const router = useRouter()
   const { toast } = useToast()
 
   const [formData, setFormData] = useState({
@@ -130,6 +132,7 @@ export function OSTransportesSection({ osId, transportes, onUpdate }: OSTranspor
       resetForm()
       setIsDialogOpen(false)
       setEditingTransporte(null)
+      router.refresh()
       onUpdate()
     } catch (error: any) {
       toast({

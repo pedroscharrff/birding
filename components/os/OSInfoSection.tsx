@@ -1,16 +1,18 @@
 "use client"
 
 import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Select } from '@/components/ui/select'
-import { Edit, Save, X } from 'lucide-react'
+import { Edit, Save, X, UserCog } from 'lucide-react'
 import { useOptimisticUpdate } from '@/hooks/useOptimisticApi'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
+import { TransferResponsavelDialog } from './TransferResponsavelDialog'
 
 interface OSInfoSectionProps {
   os: {
@@ -22,6 +24,7 @@ interface OSInfoSectionProps {
     status: string
     descricao?: string
     agenteResponsavel: {
+      id: string
       nome: string
       email: string
       telefone?: string
@@ -32,6 +35,8 @@ interface OSInfoSectionProps {
 
 export function OSInfoSection({ os, onUpdate }: OSInfoSectionProps) {
   const [isEditing, setIsEditing] = useState(false)
+  const [showTransferDialog, setShowTransferDialog] = useState(false)
+  const router = useRouter()
   const { update, isUpdating } = useOptimisticUpdate()
 
   // Estado local otimista
@@ -95,6 +100,7 @@ export function OSInfoSection({ os, onUpdate }: OSInfoSectionProps) {
       payload: formData,
       successMessage: 'OS atualizada com sucesso',
       onSuccess: () => {
+        router.refresh()
         // Opcional: chamar onUpdate se precisar atualizar dados externos
         if (onUpdate) {
           onUpdate()
@@ -174,7 +180,18 @@ export function OSInfoSection({ os, onUpdate }: OSInfoSectionProps) {
               </div>
             )}
             <div className="border-t pt-6">
-              <Label className="text-gray-600">Agente Responsável</Label>
+              <div className="flex items-center justify-between mb-2">
+                <Label className="text-gray-600">Agente Responsável</Label>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowTransferDialog(true)}
+                  className="text-xs"
+                >
+                  <UserCog className="h-3 w-3 mr-1" />
+                  Transferir
+                </Button>
+              </div>
               <div className="mt-2 space-y-1">
                 <p className="text-lg font-medium">{localOS.agenteResponsavel.nome}</p>
                 <p className="text-sm text-gray-600">{localOS.agenteResponsavel.email}</p>
@@ -252,6 +269,19 @@ export function OSInfoSection({ os, onUpdate }: OSInfoSectionProps) {
           </div>
         )}
       </CardContent>
+
+      <TransferResponsavelDialog
+        osId={os.id}
+        agenteAtual={localOS.agenteResponsavel}
+        open={showTransferDialog}
+        onOpenChange={setShowTransferDialog}
+        onSuccess={() => {
+          router.refresh()
+          if (onUpdate) {
+            onUpdate()
+          }
+        }}
+      />
     </Card>
   )
 }

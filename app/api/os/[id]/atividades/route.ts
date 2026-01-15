@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { revalidatePath } from 'next/cache'
 import { prisma } from '@/lib/db/prisma'
 import { requireAuth } from '@/lib/auth/session'
 import { createAtividadeSchema } from '@/lib/validators/atividade'
@@ -76,6 +77,10 @@ export async function POST(
     } catch (auditError) {
       console.error('[Auditoria] Erro ao registrar log:', auditError)
     }
+
+    // Revalidar cache para atualizar a lista de atividades
+    revalidatePath(`/dashboard/os/${osId}`)
+    revalidatePath('/dashboard/os')
 
     return NextResponse.json(
       {

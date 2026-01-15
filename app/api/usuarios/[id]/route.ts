@@ -64,6 +64,14 @@ export async function PATCH(
   try {
     const session = await requireAuth();
 
+    // Apenas administradores podem editar usuários
+    if (session.roleGlobal !== 'ADMINISTRADOR') {
+      return NextResponse.json(
+        { error: 'Apenas administradores podem editar usuários' },
+        { status: 403 }
+      );
+    }
+
     const body = await request.json();
     const {
       nome,
@@ -259,6 +267,14 @@ export async function DELETE(
 ) {
   try {
     const session = await requireAuth();
+
+    // Apenas administradores podem excluir usuários
+    if (session.roleGlobal !== 'ADMINISTRADOR') {
+      return NextResponse.json(
+        { error: 'Apenas administradores podem excluir usuários' },
+        { status: 403 }
+      );
+    }
 
     // Verificar se usuário existe
     const usuario = await prisma.usuario.findFirst({
