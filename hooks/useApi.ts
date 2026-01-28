@@ -119,16 +119,18 @@ export function usePaginatedApi<T = any>(
   endpoint: string,
   queryParams: Record<string, any> = {}
 ) {
-  const buildUrl = () => {
+  const [url, setUrl] = useState('')
+
+  useEffect(() => {
     const params = new URLSearchParams()
     Object.entries(queryParams).forEach(([key, value]) => {
       if (value !== undefined && value !== null && value !== '') {
         params.append(key, String(value))
       }
     })
-    return `${endpoint}?${params.toString()}`
-  }
+    setUrl(`${endpoint}?${params.toString()}`)
+  }, [endpoint, JSON.stringify(queryParams)])
 
-  return useApi<PaginatedData<T>>(buildUrl(), { autoFetch: true, unwrapData: false })
+  return useApi<PaginatedData<T>>(url, { autoFetch: !!url, unwrapData: false })
 }
 

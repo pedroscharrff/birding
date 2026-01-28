@@ -14,6 +14,9 @@ import type { OS } from '@prisma/client'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { Breadcrumbs } from '@/components/navigation/Breadcrumbs'
+import { Button } from '@/components/ui/button'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { ChevronLeft, ChevronRight } from 'lucide-react'
 
 interface OSWithCounts extends OS {
   _count: {
@@ -35,6 +38,8 @@ export default function OSPage() {
     destino: '',
     dataInicio: '',
     dataFim: '',
+    status: '',
+    page: 1,
   })
 
   const { data: response, loading, error, refetch } = usePaginatedApi<OSWithCounts>('/api/os', filters)
@@ -50,7 +55,12 @@ export default function OSPage() {
   }, [response?.data])
 
   const handleFilterChange = (field: string, value: string) => {
-    setFilters(prev => ({ ...prev, [field]: value }))
+    const newValue = value === 'all' ? '' : value
+    setFilters(prev => ({ ...prev, [field]: newValue, page: 1 }))
+  }
+
+  const handlePageChange = (newPage: number) => {
+    setFilters(prev => ({ ...prev, page: newPage }))
   }
 
   const handleStatusChange = (osId: string, newStatus: string) => {
@@ -89,7 +99,7 @@ export default function OSPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid md:grid-cols-4 gap-4">
+          <div className="grid md:grid-cols-5 gap-4">
             <Input
               placeholder="Buscar por título..."
               value={filters.titulo}
@@ -100,6 +110,27 @@ export default function OSPage() {
               value={filters.destino}
               onChange={(e) => handleFilterChange('destino', e.target.value)}
             />
+            <Select
+              value={filters.status}
+              onValueChange={(value) => handleFilterChange('status', value)}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos</SelectItem>
+                <SelectItem value="planejamento">Planejamento</SelectItem>
+                <SelectItem value="cotacoes">Cotações</SelectItem>
+                <SelectItem value="reservas_pendentes">Reservas Pendentes</SelectItem>
+                <SelectItem value="reservas_confirmadas">Reservas Confirmadas</SelectItem>
+                <SelectItem value="documentacao">Documentação</SelectItem>
+                <SelectItem value="pronto_para_viagem">Pronto para Viagem</SelectItem>
+                <SelectItem value="em_andamento">Em Andamento</SelectItem>
+                <SelectItem value="concluida">Concluída</SelectItem>
+                <SelectItem value="pos_viagem">Pós-Viagem</SelectItem>
+                <SelectItem value="cancelada">Cancelada</SelectItem>
+              </SelectContent>
+            </Select>
             <Input
               type="date"
               placeholder="Data início"
@@ -194,11 +225,64 @@ export default function OSPage() {
 
           {/* Paginação */}
           {response.pagination && response.pagination.totalPages > 1 && (
-            <div className="flex justify-center items-center gap-2 py-4">
-              <p className="text-sm text-gray-600">
-                Página {response.pagination.page} de {response.pagination.totalPages} ({response.pagination.total} resultados)
-              </p>
-            </div>
+            <Card>
+              <CardContent className="py-4">
+                <div className="flex justify-between items-center">
+                  <p className="text-sm text-gray-600">
+                    Página {response.pagination.page} de {response.pagination.totalPages} ({response.pagination.total} resultados)
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handlePageChange(filters.page - 1)}
+                      disabled={filters.page <= 1}
+                    >
+                      <ChevronLeft className="h-4 w-4" />
+                      Anterior
+                    </Button>
+                    <div className="flex items-center gap-1">
+                      {Array.from({ length: Math.min(5, response.pagination.totalPages) }, (_, i) => {
+                        const pageNum = i + 1
+                        return (
+                          <Button
+                            key={pageNum}
+                            variant={filters.page === pageNum ? 'default' : 'outline'}
+                            size="sm"
+                            onClick={() => handlePageChange(pageNum)}
+                            className="w-10"
+                          >
+                            {pageNum}
+                          </Button>
+                        )
+                      })}
+                      {response.pagination.totalPages > 5 && (
+                        <>
+                          <span className="px-2">...</span>
+                          <Button
+                            variant={filters.page === response.pagination.totalPages ? 'default' : 'outline'}
+                            size="sm"
+                            onClick={() => handlePageChange(response.pagination.totalPages)}
+                            className="w-10"
+                          >
+                            {response.pagination.totalPages}
+                          </Button>
+                        </>
+                      )}
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handlePageChange(filters.page + 1)}
+                      disabled={filters.page >= response.pagination.totalPages}
+                    >
+                      Próxima
+                      <ChevronRight className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
           )}
         </div>
       )}

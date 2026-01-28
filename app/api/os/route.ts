@@ -12,6 +12,7 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url)
     console.log('[OS][GET] session', { orgId: session.orgId, userId: session.userId })
     console.log('[OS][GET] rawParams', {
+      titulo: searchParams.get('titulo'),
       status: searchParams.get('status'),
       agente: searchParams.get('agente'),
       destino: searchParams.get('destino'),
@@ -23,6 +24,7 @@ export async function GET(request: NextRequest) {
     
     // Validar query params
     const query = listOSQuerySchema.parse({
+      titulo: searchParams.get('titulo') ?? undefined,
       status: searchParams.get('status') ?? undefined,
       agente: searchParams.get('agente') ?? undefined,
       destino: searchParams.get('destino') ?? undefined,
@@ -39,6 +41,13 @@ export async function GET(request: NextRequest) {
     // Construir filtros
     const where: any = {
       orgId: session.orgId,
+    }
+    
+    if (query.titulo) {
+      where.titulo = {
+        contains: query.titulo,
+        mode: 'insensitive',
+      }
     }
     
     if (query.status) {

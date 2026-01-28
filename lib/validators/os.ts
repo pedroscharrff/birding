@@ -41,6 +41,7 @@ export const updateOSStatusSchema = z.object({
 })
 
 export const listOSQuerySchema = z.object({
+  titulo: z.string().optional(),
   status: z.string().optional(),
   agente: z.string().uuid().optional(),
   destino: z.string().optional(),
