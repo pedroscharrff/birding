@@ -123,11 +123,11 @@ export default function OSPage() {
                 <SelectItem value="cotacoes">Cotações</SelectItem>
                 <SelectItem value="reservas_pendentes">Reservas Pendentes</SelectItem>
                 <SelectItem value="reservas_confirmadas">Reservas Confirmadas</SelectItem>
-                <SelectItem value="documentacao">Documentação</SelectItem>
+
                 <SelectItem value="pronto_para_viagem">Pronto para Viagem</SelectItem>
                 <SelectItem value="em_andamento">Em Andamento</SelectItem>
                 <SelectItem value="concluida">Concluída</SelectItem>
-                <SelectItem value="pos_viagem">Pós-Viagem</SelectItem>
+
                 <SelectItem value="cancelada">Cancelada</SelectItem>
               </SelectContent>
             </Select>

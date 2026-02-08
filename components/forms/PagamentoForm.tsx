@@ -437,7 +437,6 @@ export function PagamentoForm({ open, onOpenChange, osId, tipo, fornecedores = [
                   <input
                     id="comprovante"
                     type="file"
-                    accept="image/*,.pdf,.doc,.docx"
                     onChange={handleFileUpload}
                     disabled={uploadingFile}
                     className="hidden"
@@ -453,7 +452,7 @@ export function PagamentoForm({ open, onOpenChange, osId, tipo, fornecedores = [
                     {uploadingFile ? 'Enviando...' : 'Anexar Comprovante'}
                   </Button>
                   <p className="text-xs text-gray-500 mt-1">
-                    PDF, imagens ou documentos (máx. 10MB)
+                    Qualquer tipo de arquivo (máx. 10MB), exceto executáveis
                   </p>
                 </div>
               )}

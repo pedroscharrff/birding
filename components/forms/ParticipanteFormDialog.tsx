@@ -476,7 +476,6 @@ export function ParticipanteFormDialog({
                   onFilesChange={setDocumentos}
                   maxFiles={5}
                   maxSizeMB={10}
-                  acceptedTypes={['application/pdf', 'image/*']}
                   disabled={loading}
                 />
 

@@ -233,7 +233,15 @@ export async function getFileMetadata(fileKey: string): Promise<FileMetadata> {
  */
 export function validateFileType(fileName: string, allowedTypes: string[]): boolean {
   const extension = fileName.split('.').pop()?.toLowerCase()
-  return extension ? allowedTypes.includes(extension) : false
+  if (!extension) return false
+  
+  // Primeiro, verificar se é um tipo bloqueado (executáveis)
+  if (ALLOWED_FILE_TYPES.blocked.includes(extension)) {
+    return false
+  }
+  
+  // Depois, verificar se está na lista de permitidos
+  return allowedTypes.includes(extension)
 }
 
 /**
@@ -248,10 +256,37 @@ export function validateFileSize(size: number, maxSizeInMB: number): boolean {
  * Tipos de arquivo permitidos por categoria
  */
 export const ALLOWED_FILE_TYPES = {
-  documents: ['pdf', 'doc', 'docx', 'txt', 'odt'],
-  images: ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'],
-  spreadsheets: ['xls', 'xlsx', 'csv', 'ods'],
-  all: ['pdf', 'doc', 'docx', 'txt', 'odt', 'jpg', 'jpeg', 'png', 'gif', 'webp', 'svg', 'xls', 'xlsx', 'csv', 'ods'],
+  documents: ['pdf', 'doc', 'docx', 'txt', 'odt', 'rtf', 'pages'],
+  images: ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg', 'bmp', 'tiff', 'tif', 'ico', 'heic', 'heif'],
+  spreadsheets: ['xls', 'xlsx', 'csv', 'ods', 'numbers'],
+  presentations: ['ppt', 'pptx', 'odp', 'key'],
+  audio: ['mp3', 'wav', 'ogg', 'flac', 'm4a', 'aac', 'wma'],
+  video: ['mp4', 'avi', 'mov', 'wmv', 'flv', 'mkv', 'webm', 'm4v'],
+  archives: ['zip', 'rar', '7z', 'tar', 'gz', 'bz2', 'xz'],
+  code: ['js', 'ts', 'jsx', 'tsx', 'py', 'java', 'cpp', 'c', 'h', 'cs', 'php', 'rb', 'go', 'rs', 'swift', 'kt', 'html', 'css', 'scss', 'sass', 'less', 'json', 'xml', 'yaml', 'yml', 'md', 'sql'],
+  data: ['json', 'xml', 'yaml', 'yml', 'csv', 'tsv'],
+  // Tipos bloqueados por segurança (executáveis)
+  blocked: ['exe', 'bat', 'cmd', 'sh', 'msi', 'app', 'deb', 'rpm', 'dmg', 'pkg', 'run', 'bin', 'com', 'scr', 'vbs', 'js', 'jar'],
+  all: [
+    // Documentos
+    'pdf', 'doc', 'docx', 'txt', 'odt', 'rtf', 'pages',
+    // Imagens
+    'jpg', 'jpeg', 'png', 'gif', 'webp', 'svg', 'bmp', 'tiff', 'tif', 'ico', 'heic', 'heif',
+    // Planilhas
+    'xls', 'xlsx', 'csv', 'ods', 'numbers',
+    // Apresentações
+    'ppt', 'pptx', 'odp', 'key',
+    // Áudio
+    'mp3', 'wav', 'ogg', 'flac', 'm4a', 'aac', 'wma',
+    // Vídeo
+    'mp4', 'avi', 'mov', 'wmv', 'flv', 'mkv', 'webm', 'm4v',
+    // Arquivos compactados
+    'zip', 'rar', '7z', 'tar', 'gz', 'bz2', 'xz',
+    // Código fonte (texto)
+    'ts', 'tsx', 'jsx', 'py', 'java', 'cpp', 'c', 'h', 'cs', 'php', 'rb', 'go', 'rs', 'swift', 'kt', 'html', 'css', 'scss', 'sass', 'less', 'xml', 'yaml', 'yml', 'md', 'sql',
+    // Dados
+    'json', 'tsv',
+  ],
 }
 
 /**

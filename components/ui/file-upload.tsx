@@ -2,7 +2,7 @@
 
 import { useState, useRef } from 'react'
 import { Button } from '@/components/ui/button'
-import { Upload, X, File, FileText, Image as ImageIcon, Download, Trash2 } from 'lucide-react'
+import { Upload, X, File, FileText, Image as ImageIcon, Download, Trash2, Video, Music, Archive, Code } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 export interface UploadedFile {
@@ -33,7 +33,7 @@ export function FileUpload({
   onFilesChange,
   maxFiles = 10,
   maxSizeMB = 20,
-  acceptedTypes = ['*'],
+  acceptedTypes = ['*/*'], // Aceita todos os tipos por padrão (backend valida)
   disabled = false,
   className,
 }: FileUploadProps) {
@@ -123,6 +123,17 @@ export function FileUpload({
   const getFileIcon = (contentType: string) => {
     if (contentType.startsWith('image/')) return <ImageIcon className="h-5 w-5" />
     if (contentType.includes('pdf')) return <FileText className="h-5 w-5" />
+    if (contentType.startsWith('video/')) return <Video className="h-5 w-5" />
+    if (contentType.startsWith('audio/')) return <Music className="h-5 w-5" />
+    if (contentType.includes('zip') || contentType.includes('rar') || contentType.includes('compressed') || contentType.includes('archive')) {
+      return <Archive className="h-5 w-5" />
+    }
+    if (contentType.includes('text/') || contentType.includes('json') || contentType.includes('xml') || contentType.includes('javascript') || contentType.includes('typescript')) {
+      return <Code className="h-5 w-5" />
+    }
+    if (contentType.includes('word') || contentType.includes('document')) return <FileText className="h-5 w-5" />
+    if (contentType.includes('sheet') || contentType.includes('excel') || contentType.includes('csv')) return <FileText className="h-5 w-5" />
+    if (contentType.includes('presentation') || contentType.includes('powerpoint')) return <FileText className="h-5 w-5" />
     return <File className="h-5 w-5" />
   }
 

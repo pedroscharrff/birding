@@ -35,22 +35,26 @@ interface KanbanBoardProps {
 }
 
 const STATUS_COLUMNS: { id: StatusOS; label: string; color: string }[] = [
-  { id: 'planejamento', label: 'Planejamento', color: 'gray' },
   { id: 'cotacoes', label: 'Cotações', color: 'blue' },
   { id: 'reservas_pendentes', label: 'Reservas Pendentes', color: 'yellow' },
   { id: 'reservas_confirmadas', label: 'Confirmadas', color: 'green' },
-  { id: 'documentacao', label: 'Documentação', color: 'indigo' },
   { id: 'pronto_para_viagem', label: 'Pronto p/ Viagem', color: 'teal' },
   { id: 'em_andamento', label: 'Em Andamento', color: 'purple' },
   { id: 'concluida', label: 'Concluída', color: 'emerald' },
-  { id: 'pos_viagem', label: 'Pós-Viagem', color: 'cyan' },
+  { id: 'planejamento', label: 'Planejamento', color: 'gray' },
 ]
+
+const PERDIDAS_COLUMN = { id: 'cancelada' as StatusOS, label: 'Perdidas', color: 'red' }
 
 export function KanbanBoard({ osList, onUpdate }: KanbanBoardProps) {
   const [activeId, setActiveId] = useState<string | null>(null)
   const [optimisticList, setOptimisticList] = useState<OSWithDetails[]>(osList)
   const [syncing, setSyncing] = useState<Set<string>>(new Set())
+  const [showPerdidas, setShowPerdidas] = useState(false)
   const { toast } = useToast()
+
+  // Colunas visíveis baseadas no toggle
+  const visibleColumns = showPerdidas ? [...STATUS_COLUMNS, PERDIDAS_COLUMN] : STATUS_COLUMNS
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -165,13 +169,27 @@ export function KanbanBoard({ osList, onUpdate }: KanbanBoardProps) {
   }, [optimisticList, toast])
 
   return (
-    <DndContext
-      sensors={sensors}
-      onDragStart={handleDragStart}
-      onDragEnd={handleDragEnd}
-    >
+    <>
+      {/* Toggle para mostrar/ocultar Perdidas */}
+      <div className="flex items-center justify-end mb-4">
+        <label className="flex items-center gap-2 cursor-pointer text-sm text-gray-600 hover:text-gray-900 transition">
+          <input
+            type="checkbox"
+            checked={showPerdidas}
+            onChange={(e) => setShowPerdidas(e.target.checked)}
+            className="w-4 h-4 text-red-600 bg-gray-100 border-gray-300 rounded focus:ring-red-500 focus:ring-2 cursor-pointer"
+          />
+          <span>Mostrar Perdidas</span>
+        </label>
+      </div>
+
+      <DndContext
+        sensors={sensors}
+        onDragStart={handleDragStart}
+        onDragEnd={handleDragEnd}
+      >
       <div className="flex gap-4 overflow-x-auto pb-4">
-        {STATUS_COLUMNS.map((column) => (
+        {visibleColumns.map((column) => (
           <KanbanColumn
             key={column.id}
             id={column.id}
@@ -200,6 +218,7 @@ export function KanbanBoard({ osList, onUpdate }: KanbanBoardProps) {
       <DragOverlay>
         {activeOS ? <KanbanCard os={activeOS} isDragging /> : null}
       </DragOverlay>
-    </DndContext>
+      </DndContext>
+    </>
   )
 }
