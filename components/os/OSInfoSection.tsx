@@ -61,11 +61,11 @@ export function OSInfoSection({ os, onUpdate }: OSInfoSectionProps) {
     { value: 'cotacoes', label: 'Cotações' },
     { value: 'reservas_pendentes', label: 'Reservas Pendentes' },
     { value: 'reservas_confirmadas', label: 'Confirmadas' },
-    { value: 'documentacao', label: 'Documentação' },
+
     { value: 'pronto_para_viagem', label: 'Pronto p/ Viagem' },
     { value: 'em_andamento', label: 'Em Andamento' },
     { value: 'concluida', label: 'Concluída' },
-    { value: 'pos_viagem', label: 'Pós-Viagem' },
+
     { value: 'cancelada', label: 'Cancelada' },
   ]
 

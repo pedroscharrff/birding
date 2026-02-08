@@ -42,6 +42,14 @@ export async function POST(request: NextRequest) {
     }
 
     // Validar tipo de arquivo
+    const fileExtension = file.name.split('.').pop()?.toLowerCase()
+    if (fileExtension && ALLOWED_FILE_TYPES.blocked.includes(fileExtension)) {
+      return NextResponse.json(
+        { error: 'Arquivos executáveis não são permitidos por motivos de segurança' },
+        { status: 400 }
+      )
+    }
+    
     if (!validateFileType(file.name, ALLOWED_FILE_TYPES.all)) {
       return NextResponse.json(
         { error: 'Tipo de arquivo não permitido' },

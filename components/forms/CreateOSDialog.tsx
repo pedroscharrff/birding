@@ -40,11 +40,9 @@ const createOSSchema = z.object({
     'cotacoes',
     'reservas_pendentes',
     'reservas_confirmadas',
-    'documentacao',
     'pronto_para_viagem',
     'em_andamento',
     'concluida',
-    'pos_viagem',
     'cancelada',
   ]).default('planejamento'),
 })

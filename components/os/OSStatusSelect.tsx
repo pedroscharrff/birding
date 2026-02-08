@@ -27,11 +27,11 @@ const STATUS_OPTIONS = [
   { value: 'cotacoes', label: 'Cotações', color: 'bg-blue-100 text-blue-700' },
   { value: 'reservas_pendentes', label: 'Reservas Pendentes', color: 'bg-yellow-100 text-yellow-700' },
   { value: 'reservas_confirmadas', label: 'Confirmadas', color: 'bg-green-100 text-green-700' },
-  { value: 'documentacao', label: 'Documentação', color: 'bg-indigo-100 text-indigo-700' },
+
   { value: 'pronto_para_viagem', label: 'Pronto p/ Viagem', color: 'bg-teal-100 text-teal-700' },
   { value: 'em_andamento', label: 'Em Andamento', color: 'bg-purple-100 text-purple-700' },
   { value: 'concluida', label: 'Concluída', color: 'bg-emerald-100 text-emerald-700' },
-  { value: 'pos_viagem', label: 'Pós-Viagem', color: 'bg-cyan-100 text-cyan-700' },
+
   { value: 'cancelada', label: 'Cancelada', color: 'bg-red-100 text-red-700' },
 ]
 

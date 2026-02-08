@@ -158,7 +158,6 @@ export function DespesaPagarDialog({ open, onOpenChange, osId, despesa, onSucces
               onFilesChange={setComprovantes}
               maxFiles={3}
               maxSizeMB={5}
-              acceptedTypes={['application/pdf', 'image/*']}
               disabled={loading}
             />
           </div>

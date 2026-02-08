@@ -410,7 +410,6 @@ export function FornecedorFormDialog({ open, onClose, fornecedor }: FornecedorFo
               onFilesChange={setArquivos}
               maxFiles={10}
               maxSizeMB={10}
-              acceptedTypes={['application/pdf', 'image/*', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document']}
               disabled={loading}
             />
           </div>
