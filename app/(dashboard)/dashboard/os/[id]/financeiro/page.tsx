@@ -15,6 +15,13 @@ import { DespesaPagarDialog } from '@/components/forms/DespesaPagarDialog'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Breadcrumbs } from '@/components/navigation/Breadcrumbs'
 import { AuditoriaButton } from '@/components/os/auditoria-button'
+import { useSearchParams, useRouter } from 'next/navigation'
+
+interface Extension {
+  id: string
+  nome: string
+  ordem: number
+}
 
 interface FinanceiroData {
   resumo: {
@@ -151,10 +158,31 @@ export default function OSFinanceiroPage() {
   const [groupByFornecedor, setGroupByFornecedor] = useState<boolean>(false)
   const [grupos, setGrupos] = useState<GrupoFornecedor[]>([])
   const [osTitle, setOsTitle] = useState<string>('...')
+  
+  const [extensions, setExtensions] = useState<Extension[]>([])
+  const [selectedExtension, setSelectedExtension] = useState<string>('all')
+
+  // Carregar extensões
+  useEffect(() => {
+    async function fetchExtensions() {
+      try {
+        const res = await fetch(`/api/os/${osId}/extensoes`)
+        if (res.ok) {
+          const data = await res.json()
+          if (data.success) {
+            setExtensions(data.data)
+          }
+        }
+      } catch (error) {
+        console.error('Erro ao buscar extensões:', error)
+      }
+    }
+    fetchExtensions()
+  }, [osId])
 
   useEffect(() => {
     loadData()
-  }, [osId])
+  }, [osId, selectedExtension])
 
   // Buscar título da OS para breadcrumb
   useEffect(() => {
@@ -178,14 +206,22 @@ export default function OSFinanceiroPage() {
       setLoading(true)
       setError(null)
 
+      // Construir query string para filtro de extensão
+      let queryExt = ''
+      if (selectedExtension !== 'all') {
+        queryExt = `?extensaoId=${selectedExtension === 'main' ? 'null' : selectedExtension}`
+      }
+
+      const despesasUrl = `/api/os/${osId}/despesas${queryExt}${groupByFornecedor ? (queryExt ? '&' : '?') + 'agruparPorFornecedor=true' : ''}`
+
       // Buscar dados financeiros
       const [financeiroRes, pagamentosRes, fornecedoresRes, despesasRes] = await Promise.all([
-        fetch(`/api/os/${osId}/financeiro`),
-        fetch(`/api/os/${osId}/pagamentos`),
+        fetch(`/api/os/${osId}/financeiro${queryExt}`),
+        fetch(`/api/os/${osId}/pagamentos${queryExt}`),
         fetch(`/api/fornecedores`),
-        fetch(`/api/os/${osId}/despesas${groupByFornecedor ? '?agruparPorFornecedor=true' : ''}`)
+        fetch(despesasUrl)
       ])
-
+      
       if (!financeiroRes.ok || !pagamentosRes.ok || !despesasRes.ok) {
         throw new Error('Erro ao carregar dados financeiros')
       }
@@ -309,7 +345,23 @@ export default function OSFinanceiroPage() {
             Controle financeiro completo da operação
           </p>
         </div>
-        <AuditoriaButton osId={osId} />
+        <div className="flex items-center gap-2">
+           <Select value={selectedExtension} onValueChange={setSelectedExtension}>
+            <SelectTrigger className="w-[200px]">
+              <SelectValue placeholder="Filtrar por Extensão" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todas as Extensões</SelectItem>
+              <SelectItem value="main">Viagem Principal</SelectItem>
+              {extensions.map((ext) => (
+                <SelectItem key={ext.id} value={ext.id}>
+                  {ext.nome}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <AuditoriaButton osId={osId} />
+        </div>
       </div>
 
       {/* KPIs Principais */}
@@ -790,6 +842,12 @@ export default function OSFinanceiroPage() {
           if (!open) setEditingRecebimento(null)
         }}
         osId={osId}
+        // Passar extensão selecionada para o form se não for 'all'
+        // Se for 'main', passar null explicitamente? O form deve tratar.
+        // O PagamentoForm precisa aceitar initialData com extensaoId ou prop específica.
+        // Vou assumir que o usuário seleciona a extensão NO form se quiser, ou herda daqui.
+        // Por enquanto, deixamos o form como está, mas idealmente passamos o contexto.
+        initialData={selectedExtension !== 'all' ? { extensaoId: selectedExtension === 'main' ? null : selectedExtension } : undefined}
         tipo="entrada"
         pagamento={editingRecebimento}
         onSuccess={loadData}
@@ -797,6 +855,7 @@ export default function OSFinanceiroPage() {
 
       <PagamentoForm
         open={showPagamentoForm}
+        initialData={selectedExtension !== 'all' ? { extensaoId: selectedExtension === 'main' ? null : selectedExtension } : undefined}
         onOpenChange={(open) => {
           setShowPagamentoForm(open)
           if (!open) setEditingPagamentoSaida(null)

@@ -32,9 +32,10 @@ interface OSAlimentacaoSectionProps {
   osId: string
   alimentacoes: Alimentacao[]
   onUpdate: () => void
+  extensaoId?: string | null
 }
 
-export function OSAlimentacaoSection({ osId, alimentacoes, onUpdate }: OSAlimentacaoSectionProps) {
+export function OSAlimentacaoSection({ osId, alimentacoes, onUpdate, extensaoId }: OSAlimentacaoSectionProps) {
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [loading, setLoading] = useState(false)
   const [editingAlimentacao, setEditingAlimentacao] = useState<Alimentacao | null>(null)
@@ -89,6 +90,7 @@ export function OSAlimentacaoSection({ osId, alimentacoes, onUpdate }: OSAliment
         data: formData.data || undefined,
         hora: formData.hora || undefined,
         notas: formData.notas || undefined,
+        extensaoId: extensaoId || null,
       }
 
       const url = editingAlimentacao

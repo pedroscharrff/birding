@@ -22,6 +22,7 @@ const createPagamentoSchema = z.object({
   comprovanteUrl: z.string().optional().nullable(),
   fornecedorId: z.string().optional().nullable(),
   observacoes: z.string().optional().nullable(),
+  extensaoId: z.string().optional().nullable(),
 })
 
 /**
@@ -34,6 +35,16 @@ export async function GET(
   try {
     const session = await requireAuth()
     const osId = params.id
+
+    const { searchParams } = new URL(request.url)
+    const extensaoIdParam = searchParams.get('extensaoId')
+    let extensaoId: string | null | undefined = undefined
+    
+    if (extensaoIdParam === 'null') {
+      extensaoId = null
+    } else if (extensaoIdParam) {
+      extensaoId = extensaoIdParam
+    }
 
     // Verificar se a OS existe e pertence à organização
     const os = await prisma.oS.findFirst({
@@ -51,7 +62,7 @@ export async function GET(
     }
 
     // Obter resumo de pagamentos
-    const resumo = await obterPagamentosOS(osId)
+    const resumo = await obterPagamentosOS(osId, extensaoId)
 
     return NextResponse.json({
       success: true,
@@ -141,6 +152,7 @@ export async function POST(
         comprovanteUrl: validatedData.comprovanteUrl,
         fornecedorId: validatedData.fornecedorId,
         observacoes: validatedData.observacoes,
+        extensaoId: validatedData.extensaoId || null,
       },
       include: {
         fornecedor: {

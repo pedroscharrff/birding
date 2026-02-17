@@ -19,6 +19,7 @@ export async function GET(
       where: {
         id,
         orgId: session.orgId,
+        deletedAt: null,
       },
       select: {
         id: true,
@@ -55,14 +56,35 @@ export async function GET(
             observacoes: true,
             documentos: true,
             createdAt: true,
+            extensoes: {
+              select: {
+                id: true,
+              },
+            },
           },
           orderBy: {
             nome: 'asc',
           },
         },
+        extensoes: {
+          select: {
+            id: true,
+            nome: true,
+            dataInicio: true,
+            dataFim: true,
+            descricao: true,
+            ordem: true,
+            status: true,
+          },
+          orderBy: {
+            dataInicio: 'asc',
+          },
+        },
+
         fornecedores: {
           select: {
             id: true,
+            extensaoId: true,
             fornecedorId: true,
             categoria: true,
             contatoNome: true,
@@ -83,6 +105,7 @@ export async function GET(
         atividades: {
           select: {
             id: true,
+            extensaoId: true,
             tipo: true,
             nome: true,
             valor: true,
@@ -109,6 +132,7 @@ export async function GET(
         hospedagens: {
           select: {
             id: true,
+            extensaoId: true,
             fornecedorId: true,
             tarifaId: true,
             hotelNome: true,
@@ -138,6 +162,7 @@ export async function GET(
         transportes: {
           select: {
             id: true,
+            extensaoId: true,
             tipo: true,
             fornecedorId: true,
             origem: true,
@@ -162,6 +187,7 @@ export async function GET(
         passagensAereas: {
           select: {
             id: true,
+            extensaoId: true,
             categoria: true,
             passageiroNome: true,
             cia: true,
@@ -179,6 +205,7 @@ export async function GET(
         guiasDesignacao: {
           select: {
             id: true,
+            extensaoId: true,
             guiaId: true,
             funcao: true,
             guia: {
@@ -194,6 +221,7 @@ export async function GET(
         motoristasDesignacao: {
           select: {
             id: true,
+            extensaoId: true,
             motoristaId: true,
             veiculoTipo: true,
             motorista: {
@@ -259,6 +287,12 @@ export async function GET(
                 nome: true,
               },
             },
+            extensaoId: true,
+            extensao: {
+              select: {
+                nome: true,
+              },
+            },
           },
           orderBy: {
             createdAt: 'desc',
@@ -314,6 +348,7 @@ export async function PATCH(
       where: {
         id,
         orgId: session.orgId,
+        deletedAt: null,
       },
     })
     
@@ -387,7 +422,7 @@ export async function PATCH(
   }
 }
 
-// DELETE /api/os/[id] - Deletar OS
+// DELETE /api/os/[id] - Deletar OS (Soft Delete)
 export async function DELETE(
   request: NextRequest,
   { params }: { params: { id: string } }
@@ -396,11 +431,20 @@ export async function DELETE(
     const session = await requireAuth()
     const { id } = params
     
+    // Verificar se usuário é admin
+    if (session.roleGlobal !== 'admin') {
+      return NextResponse.json(
+        { success: false, error: 'Permissão negada. Apenas administradores podem deletar OS.' },
+        { status: 403 }
+      )
+    }
+    
     // Verificar se OS existe e pertence à organização
     const existingOS = await prisma.oS.findFirst({
       where: {
         id,
         orgId: session.orgId,
+        deletedAt: null,
       },
     })
     
@@ -411,9 +455,32 @@ export async function DELETE(
       )
     }
     
-    // Deletar OS (cascade vai deletar relacionamentos)
-    await prisma.oS.delete({
-      where: { id },
+    // Realizar Soft Delete
+    await prisma.$transaction(async (tx) => {
+      // 1. Marcar OS como deletada
+      await tx.oS.update({
+        where: { id },
+        data: {
+          deletedAt: new Date(),
+          deletedBy: session.userId,
+        },
+      })
+
+      // 2. Criar log de auditoria
+      await tx.auditoriaOS.create({
+        data: {
+          orgId: session.orgId,
+          osId: id,
+          usuarioId: session.userId,
+          usuarioNome: 'Admin', // Idealmente buscar nome do usuário, mas sessão tem ID
+          usuarioRole: session.roleGlobal as any, // RoleGlobal enum
+          acao: 'excluir',
+          entidade: 'os',
+          entidadeId: id,
+          descricao: `OS excluída por administrador (Soft Delete)`,
+          dadosAntigos: existingOS as any, // Salvar estado anterior
+        },
+      })
     })
 
     // Invalidar cache de estatísticas

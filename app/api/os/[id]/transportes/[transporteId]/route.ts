@@ -13,6 +13,7 @@ const tipoTransporteSchema = z.preprocess(
     'executivo_fora_cidade',
     'aereo_cliente',
     'aereo_guia',
+    'suv',
   ])
 )
 

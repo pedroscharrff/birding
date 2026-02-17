@@ -113,6 +113,7 @@ export interface RolePermissions {
 export interface LogAuditoriaParams {
   osId: string
   usuarioId: string
+  extensaoId?: string | null
   acao: string // AcaoAuditoria
   entidade: string // EntidadeAuditoria
   entidadeId?: string
@@ -135,6 +136,7 @@ export interface AuditoriaMetadata {
 export interface AuditoriaFilters {
   osId?: string
   usuarioId?: string
+  extensaoId?: string | null
   acao?: string
   entidade?: string
   entidadeId?: string

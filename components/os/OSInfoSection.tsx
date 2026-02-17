@@ -13,6 +13,7 @@ import { useOptimisticUpdate } from '@/hooks/useOptimisticApi'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { TransferResponsavelDialog } from './TransferResponsavelDialog'
+import { DeleteOSDialog } from './DeleteOSDialog'
 
 interface OSInfoSectionProps {
   os: {
@@ -130,10 +131,13 @@ export function OSInfoSection({ os, onUpdate }: OSInfoSectionProps) {
             <CardDescription>Detalhes da ordem de serviço</CardDescription>
           </div>
           {!isEditing ? (
-            <Button variant="outline" size="sm" onClick={() => setIsEditing(true)}>
-              <Edit className="h-4 w-4 mr-2" />
-              Editar
-            </Button>
+            <div className="flex gap-2">
+              <DeleteOSDialog osId={os.id} tituloOS={os.titulo} />
+              <Button variant="outline" size="sm" onClick={() => setIsEditing(true)}>
+                <Edit className="h-4 w-4 mr-2" />
+                Editar
+              </Button>
+            </div>
           ) : (
             <div className="flex gap-2">
               <Button variant="outline" size="sm" onClick={handleCancel} disabled={isUpdating}>

@@ -14,6 +14,7 @@ const tipoTransporteSchema = z.preprocess(
     'executivo_fora_cidade',
     'aereo_cliente',
     'aereo_guia',
+    'suv',
   ])
 )
 
@@ -36,6 +37,7 @@ const createTransporteSchema = z.object({
     )
     .optional(),
   moeda: z.enum(['BRL', 'USD', 'EUR']).optional().nullable(),
+  extensaoId: z.string().uuid().optional().nullable(),
 })
 
 // POST /api/os/[id]/transportes - Adicionar transporte
@@ -112,6 +114,7 @@ export async function POST(
         dataChegada: validatedData.dataChegada ? new Date(validatedData.dataChegada) : null,
         custo: validatedData.custo === undefined ? null : validatedData.custo,
         moeda: validatedData.moeda || 'BRL',
+        extensaoId: validatedData.extensaoId || null,
       },
       include: {
         fornecedor: {

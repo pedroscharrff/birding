@@ -13,6 +13,10 @@ interface HistoricoItem {
   alteradoPor: string
   motivo?: string
   createdAt: string
+  extensaoId?: string
+  extensao?: {
+    nome: string
+  }
   usuario: {
     id: string
     nome: string
@@ -92,6 +96,11 @@ export function OSStatusHistory({ historico }: OSStatusHistoryProps) {
               </div>
               <div className="flex-1 space-y-2">
                 <div className="flex items-center gap-2 flex-wrap">
+                  {item.extensao && (
+                    <Badge variant="outline" className="mr-2 border-blue-200 bg-blue-50 text-blue-700">
+                      ext: {item.extensao.nome}
+                    </Badge>
+                  )}
                   {item.de ? (
                     <>
                       <Badge className={STATUS_COLORS[item.de] || 'bg-gray-100'}>

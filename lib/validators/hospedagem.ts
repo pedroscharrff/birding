@@ -13,6 +13,7 @@ export const createHospedagemSchema = z.object({
   moeda: z.enum(['BRL', 'USD', 'EUR']).default('BRL'),
   observacoes: z.string().optional(),
   reservasRefs: z.any().optional(),
+  extensaoId: z.string().uuid().optional().nullable(),
 })
 
 export const updateHospedagemSchema = createHospedagemSchema.partial().omit({ osId: true })

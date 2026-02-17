@@ -33,9 +33,10 @@ interface OSHospedagensSectionProps {
   osId: string
   hospedagens: Hospedagem[]
   onUpdate: () => void
+  extensaoId?: string | null
 }
 
-export function OSHospedagensSection({ osId, hospedagens, onUpdate }: OSHospedagensSectionProps) {
+export function OSHospedagensSection({ osId, hospedagens, onUpdate, extensaoId }: OSHospedagensSectionProps) {
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [isBatchDialogOpen, setIsBatchDialogOpen] = useState(false)
   const [loading, setLoading] = useState(false)
@@ -141,6 +142,7 @@ export function OSHospedagensSection({ osId, hospedagens, onUpdate }: OSHospedag
         tipoQuarto: formData.tipoQuarto || undefined,
         tarifaId: formData.tarifaId || undefined,
         observacoes: formData.observacoes || undefined,
+        extensaoId: extensaoId || null,
       }
 
       const url = editingHospedagem

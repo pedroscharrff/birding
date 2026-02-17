@@ -38,10 +38,20 @@ export async function GET(
     const page = searchParams.get('page') ? parseInt(searchParams.get('page')!) : 1
     const limit = searchParams.get('limit') ? parseInt(searchParams.get('limit')!) : 50
 
+    const extensaoIdParam = searchParams.get('extensaoId')
+    let extensaoId: string | null | undefined = undefined
+    
+    if (extensaoIdParam === 'null') {
+      extensaoId = null
+    } else if (extensaoIdParam) {
+      extensaoId = extensaoIdParam
+    }
+
     // Buscar auditorias
     const { data, total, fromCache } = await buscarAuditorias({
       osId,
       usuarioId,
+      extensaoId,
       acao,
       entidade,
       entidadeId,

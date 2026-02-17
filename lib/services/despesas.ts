@@ -25,22 +25,28 @@ export interface DespesaConsolidada {
 /**
  * Busca todas as despesas de uma OS consolidadas
  */
-export async function buscarDespesasConsolidadas(osId: string): Promise<DespesaConsolidada[]> {
+export async function buscarDespesasConsolidadas(osId: string, extensaoId?: string | null): Promise<DespesaConsolidada[]> {
+  const where: any = { osId }
+  
+  if (extensaoId !== undefined) {
+    where.extensaoId = extensaoId
+  }
+
   const [hospedagens, transportes, atividades, passagensAereas] = await Promise.all([
     prisma.hospedagem.findMany({
-      where: { osId },
+      where,
       include: { fornecedor: { select: { id: true, nomeFantasia: true } } }
     }),
     prisma.transporte.findMany({
-      where: { osId },
+      where,
       include: { fornecedor: { select: { id: true, nomeFantasia: true } } }
     }),
     prisma.atividade.findMany({
-      where: { osId },
+      where,
       include: { fornecedor: { select: { id: true, nomeFantasia: true } } }
     }),
     prisma.passagemAerea.findMany({
-      where: { osId }
+      where
     })
   ])
 
@@ -189,8 +195,8 @@ export async function atualizarStatusPagamentoDespesa(
 /**
  * Resumo de pagamentos por fornecedor
  */
-export async function resumoPagamentosPorFornecedor(osId: string) {
-  const despesas = await buscarDespesasConsolidadas(osId)
+export async function resumoPagamentosPorFornecedor(osId: string, extensaoId?: string | null) {
+  const despesas = await buscarDespesasConsolidadas(osId, extensaoId)
 
   const resumo = new Map<string, {
     fornecedor: { id: string; nomeFantasia: string }

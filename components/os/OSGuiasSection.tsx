@@ -42,9 +42,10 @@ interface OSGuiasSectionProps {
   osId: string
   guias: Guia[]
   onUpdate: () => void
+  extensaoId?: string | null
 }
 
-export function OSGuiasSection({ osId, guias, onUpdate }: OSGuiasSectionProps) {
+export function OSGuiasSection({ osId, guias, onUpdate, extensaoId }: OSGuiasSectionProps) {
   const [isGuiaDialogOpen, setIsGuiaDialogOpen] = useState(false)
   const [isFornecedorDialogOpen, setIsFornecedorDialogOpen] = useState(false)
   const [loading, setLoading] = useState(false)
@@ -65,12 +66,14 @@ export function OSGuiasSection({ osId, guias, onUpdate }: OSGuiasSectionProps) {
   // Buscar fornecedores de guiamento
   useEffect(() => {
     fetchFornecedoresGuiamento()
-  }, [osId])
+  }, [osId, extensaoId])
 
   const fetchFornecedoresGuiamento = async () => {
     setLoadingFornecedores(true)
     try {
-      const res = await fetch(`/api/os/${osId}/fornecedores-guiamento`, {
+      // Add query param for extension filtering
+      const query = extensaoId ? `?extensaoId=${extensaoId}` : ''
+      const res = await fetch(`/api/os/${osId}/fornecedores-guiamento${query}`, {
         credentials: 'include',
       })
 
@@ -99,6 +102,7 @@ export function OSGuiasSection({ osId, guias, onUpdate }: OSGuiasSectionProps) {
     const payload = {
       guiaId: formData.guiaId,
       funcao: formData.funcao?.trim() || null,
+      extensaoId: extensaoId || null // Add extension context
     }
 
     try {
@@ -240,6 +244,7 @@ export function OSGuiasSection({ osId, guias, onUpdate }: OSGuiasSectionProps) {
       contatoEmail: formData.contatoEmail?.trim() || null,
       contatoTelefone: formData.contatoTelefone?.trim() || null,
       contratoRef: formData.contratoRef?.trim() || null,
+      extensaoId: extensaoId || null // Add extension context
     }
 
     try {
