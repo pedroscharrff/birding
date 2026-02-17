@@ -6,8 +6,8 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
   directUrl = env("DIRECT_URL")
 }
 
@@ -36,7 +36,7 @@ enum StatusOS {
 
 enum TipoTransporte {
   van
-  quatro_x_quatro @map("4x4")
+  quatro_x_quatro       @map("4x4")
   executivo_cidade
   executivo_fora_cidade
   aereo_cliente
@@ -49,8 +49,8 @@ enum TipoLancamento {
   saida
   adiantamento
   ajuste
-  receita_os      // Receita de venda de OS/Tour
-  comissao        // Comissão de agente/guia
+  receita_os // Receita de venda de OS/Tour
+  comissao // Comissão de agente/guia
 }
 
 enum CategoriaLancamento {
@@ -63,11 +63,11 @@ enum CategoriaLancamento {
   passagem_aerea
   despesa_guia
   despesa_motorista
-  receita_tour    // Receita de venda de tour
+  receita_tour // Receita de venda de tour
   comissao_agente // Comissão do agente
-  comissao_guia   // Comissão do guia
-  reembolso       // Reembolsos diversos
-  cancelamento    // Taxas de cancelamento
+  comissao_guia // Comissão do guia
+  reembolso // Reembolsos diversos
+  cancelamento // Taxas de cancelamento
   outros
 }
 
@@ -176,60 +176,63 @@ model Organizacao {
   updatedAt DateTime @updatedAt @map("updated_at")
 
   // Relations
-  usuarios              Usuario[]
-  fornecedores          Fornecedor[]
-  os                    OS[]
+  usuarios               Usuario[]
+  fornecedores           Fornecedor[]
+  os                     OS[]
   lancamentosFinanceiros LancamentoFinanceiro[]
-  pagamentosOS          PagamentoOS[]
-  eventosCalendario     EventoCalendario[]
-  presetCategories      PresetCategory[]
-  presetItems           PresetItem[]
-  presetTemplates       PresetTemplate[]
-  auditorias            AuditoriaOS[]
-  policies              OrganizacaoPolicy[]
-  cotacoes              Cotacao[]
+  pagamentosOS           PagamentoOS[]
+  eventosCalendario      EventoCalendario[]
+  presetCategories       PresetCategory[]
+  presetItems            PresetItem[]
+  presetTemplates        PresetTemplate[]
+  auditorias             AuditoriaOS[]
+  policies               OrganizacaoPolicy[]
+  cotacoes               Cotacao[]
+  contasPagamento        ContaPagamento[]
+  invoices               Invoice[]
 
   @@index([nome])
   @@map("organizacoes")
 }
 
 model Usuario {
-  id          String      @id @default(uuid())
-  orgId       String      @map("org_id")
-  nome        String
-  email       String      @unique
-  telefone    String?
-  roleGlobal  RoleGlobal  @map("role_global")
-  hashSenha   String      @map("hash_senha")
-  ativo       Boolean     @default(true)
-  
+  id         String     @id @default(uuid())
+  orgId      String     @map("org_id")
+  nome       String
+  email      String     @unique
+  telefone   String?
+  roleGlobal RoleGlobal @map("role_global")
+  hashSenha  String     @map("hash_senha")
+  ativo      Boolean    @default(true)
+
   // Campos de Permissões e Hierarquia
-  permissoes  Json?       // Objeto com permissões granulares por módulo
-  departamento String?    // Departamento/Setor do usuário
-  cargo       String?     // Cargo do usuário
-  supervisorId String?    @map("supervisor_id") // ID do supervisor direto
-  
+  permissoes   Json? // Objeto com permissões granulares por módulo
+  departamento String? // Departamento/Setor do usuário
+  cargo        String? // Cargo do usuário
+  supervisorId String? @map("supervisor_id") // ID do supervisor direto
+
   // Dados adicionais
-  avatar      String?     // URL do avatar
-  ultimoAcesso DateTime?  @map("ultimo_acesso")
-  
-  createdAt   DateTime    @default(now()) @map("created_at")
-  updatedAt   DateTime    @updatedAt @map("updated_at")
+  avatar       String? // URL do avatar
+  ultimoAcesso DateTime? @map("ultimo_acesso")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
   // Relations
-  organizacao            Organizacao            @relation(fields: [orgId], references: [id], onDelete: Cascade)
-  supervisor             Usuario?               @relation("UsuarioSupervisor", fields: [supervisorId], references: [id])
-  subordinados           Usuario[]              @relation("UsuarioSupervisor")
-  osResponsavel          OS[]                   @relation("OSResponsavel")
-  guiaDesignacoes        GuiaDesignacao[]
-  motoristaDesignacoes   MotoristaDesignacao[]
-  scoutings              Scouting[]
-  lancamentosReferencia  LancamentoFinanceiro[] @relation("LancamentoReferenciaUsuario")
-  lancamentosCriados     LancamentoFinanceiro[] @relation("LancamentoCriadoPor")
-  anotacoes              Anotacao[]
-  historicoStatus        HistoricoStatus[]
-  auditorias             AuditoriaOS[]
-  cotacoes               Cotacao[]
+  organizacao           Organizacao            @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  supervisor            Usuario?               @relation("UsuarioSupervisor", fields: [supervisorId], references: [id])
+  subordinados          Usuario[]              @relation("UsuarioSupervisor")
+  osResponsavel         OS[]                   @relation("OSResponsavel")
+  guiaDesignacoes       GuiaDesignacao[]
+  motoristaDesignacoes  MotoristaDesignacao[]
+  scoutings             Scouting[]
+  lancamentosReferencia LancamentoFinanceiro[] @relation("LancamentoReferenciaUsuario")
+  lancamentosCriados    LancamentoFinanceiro[] @relation("LancamentoCriadoPor")
+  anotacoes             Anotacao[]
+  historicoStatus       HistoricoStatus[]
+  auditorias            AuditoriaOS[]
+  cotacoes              Cotacao[]
+  invoices              Invoice[]
 
   @@index([orgId])
   @@index([email])
@@ -241,22 +244,22 @@ model Usuario {
 }
 
 model Fornecedor {
-  id            String          @id @default(uuid())
-  orgId         String          @map("org_id")
-  nomeFantasia  String          @map("nome_fantasia")
-  razaoSocial   String?         @map("razao_social")
-  tipo          TipoFornecedor
-  email         String?
-  telefone      String?
-  documento     String?
-  endereco      Json?
-  obs           String?
-  
+  id           String         @id @default(uuid())
+  orgId        String         @map("org_id")
+  nomeFantasia String         @map("nome_fantasia")
+  razaoSocial  String?        @map("razao_social")
+  tipo         TipoFornecedor
+  email        String?
+  telefone     String?
+  documento    String?
+  endereco     Json?
+  obs          String?
+
   // Arquivos/Documentos
-  arquivos      Json?           // Array de { url, key, fileName, contentType, uploadedAt, categoria }
-  
-  createdAt     DateTime        @default(now()) @map("created_at")
-  updatedAt     DateTime        @updatedAt @map("updated_at")
+  arquivos Json? // Array de { url, key, fileName, contentType, uploadedAt, categoria }
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
   // Relations
   organizacao            Organizacao            @relation(fields: [orgId], references: [id], onDelete: Cascade)
@@ -276,24 +279,24 @@ model Fornecedor {
 }
 
 model FornecedorTarifa {
-  id            String    @id @default(uuid())
-  fornecedorId  String    @map("fornecedor_id")
-  descricao     String
-  valor         Decimal   @db.Decimal(12, 2)
-  moeda         Moeda     @default(BRL)
-  unidade       String?   // Ex: "por pessoa", "por dia", "por grupo", "por km"
+  id             String    @id @default(uuid())
+  fornecedorId   String    @map("fornecedor_id")
+  descricao      String
+  valor          Decimal   @db.Decimal(12, 2)
+  moeda          Moeda     @default(BRL)
+  unidade        String? // Ex: "por pessoa", "por dia", "por grupo", "por km"
   vigenciaInicio DateTime? @map("vigencia_inicio") @db.Date
   vigenciaFim    DateTime? @map("vigencia_fim") @db.Date
-  ativo         Boolean   @default(true)
-  observacoes   String?
-  
+  ativo          Boolean   @default(true)
+  observacoes    String?
+
   // Campos específicos para Hotelaria
-  tipoQuarto    String?   @map("tipo_quarto")  // single, duplo, triplo, suite, etc
-  regime        String?   // sem_cafe, cafe, meia_pensao, pensao_completa, all_inclusive
-  quartos       Int?      // Número de quartos incluídos na tarifa
-  
-  createdAt     DateTime  @default(now()) @map("created_at")
-  updatedAt     DateTime  @updatedAt @map("updated_at")
+  tipoQuarto String? @map("tipo_quarto") // single, duplo, triplo, suite, etc
+  regime     String? // sem_cafe, cafe, meia_pensao, pensao_completa, all_inclusive
+  quartos    Int? // Número de quartos incluídos na tarifa
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
   // Relations
   fornecedor  Fornecedor   @relation(fields: [fornecedorId], references: [id], onDelete: Cascade)
@@ -307,35 +310,35 @@ model FornecedorTarifa {
 }
 
 model OS {
-  id                    String     @id @default(uuid())
-  orgId                 String     @map("org_id")
-  titulo                String
-  destino               String
-  dataInicio            DateTime   @map("data_inicio") @db.Date
-  dataFim               DateTime   @map("data_fim") @db.Date
-  status                StatusOS   @default(planejamento)
-  agenteResponsavelId   String     @map("agente_responsavel_id")
-  descricao             String?
-  checklist             Json?
+  id                  String   @id @default(uuid())
+  orgId               String   @map("org_id")
+  titulo              String
+  destino             String
+  dataInicio          DateTime @map("data_inicio") @db.Date
+  dataFim             DateTime @map("data_fim") @db.Date
+  status              StatusOS @default(planejamento)
+  agenteResponsavelId String   @map("agente_responsavel_id")
+  descricao           String?
+  checklist           Json?
 
   // Campos Financeiros
-  valorVenda            Decimal?   @map("valor_venda") @db.Decimal(12, 2)
-  moedaVenda            Moeda      @default(BRL) @map("moeda_venda")
-  valorRecebido         Decimal?   @map("valor_recebido") @db.Decimal(12, 2) @default(0)
-  custoEstimado         Decimal?   @map("custo_estimado") @db.Decimal(12, 2)
-  custoReal             Decimal?   @map("custo_real") @db.Decimal(12, 2)
-  margemEstimada        Decimal?   @map("margem_estimada") @db.Decimal(5, 2) // Percentual
-  obsFinanceiras        String?    @map("obs_financeiras") @db.Text
+  valorVenda     Decimal? @map("valor_venda") @db.Decimal(12, 2)
+  moedaVenda     Moeda    @default(BRL) @map("moeda_venda")
+  valorRecebido  Decimal? @default(0) @map("valor_recebido") @db.Decimal(12, 2)
+  custoEstimado  Decimal? @map("custo_estimado") @db.Decimal(12, 2)
+  custoReal      Decimal? @map("custo_real") @db.Decimal(12, 2)
+  margemEstimada Decimal? @map("margem_estimada") @db.Decimal(5, 2) // Percentual
+  obsFinanceiras String?  @map("obs_financeiras") @db.Text
 
   // Arquivos/Documentos
-  arquivos              Json?      // Array de { url, key, fileName, contentType, uploadedAt, categoria }
+  arquivos Json? // Array de { url, key, fileName, contentType, uploadedAt, categoria }
 
-  createdAt             DateTime   @default(now()) @map("created_at")
-  updatedAt             DateTime   @default(now()) @updatedAt @map("updated_at")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
 
   // Soft Delete
-  deletedAt             DateTime?  @map("deleted_at")
-  deletedBy             String?    @map("deleted_by")
+  deletedAt DateTime? @map("deleted_at")
+  deletedBy String?   @map("deleted_by")
 
   // Relations
   organizacao            Organizacao            @relation(fields: [orgId], references: [id], onDelete: Cascade)
@@ -357,6 +360,7 @@ model OS {
   auditorias             AuditoriaOS[]
   policySnapshots        OSPolicySnapshot[]
   extensoes              OSExtensao[]
+  Invoice                Invoice[]
 
   @@index([orgId])
   @@index([status])
@@ -369,69 +373,69 @@ model OS {
 }
 
 model OSExtensao {
-  id          String   @id @default(uuid())
-  osId        String   @map("os_id")
-  nome        String
-  dataInicio  DateTime @map("data_inicio") @db.Date
-  dataFim     DateTime @map("data_fim") @db.Date
-  descricao   String?  @db.Text
-  ordem       Int      @default(0)
-  status      StatusOS @default(planejamento)
-  
+  id         String   @id @default(uuid())
+  osId       String   @map("os_id")
+  nome       String
+  dataInicio DateTime @map("data_inicio") @db.Date
+  dataFim    DateTime @map("data_fim") @db.Date
+  descricao  String?  @db.Text
+  ordem      Int      @default(0)
+  status     StatusOS @default(planejamento)
+
   // Campos Financeiros (para controle separado por extensão)
-  valorVenda      Decimal? @map("valor_venda") @db.Decimal(12, 2)
-  moedaVenda      Moeda    @default(BRL) @map("moeda_venda")
-  valorRecebido   Decimal? @map("valor_recebido") @db.Decimal(12, 2) @default(0)
-  custoEstimado   Decimal? @map("custo_estimado") @db.Decimal(12, 2)
-  custoReal       Decimal? @map("custo_real") @db.Decimal(12, 2)
-  margemEstimada  Decimal? @map("margem_estimada") @db.Decimal(5, 2)
-  obsFinanceiras  String?  @map("obs_financeiras") @db.Text
-  
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
+  valorVenda     Decimal? @map("valor_venda") @db.Decimal(12, 2)
+  moedaVenda     Moeda    @default(BRL) @map("moeda_venda")
+  valorRecebido  Decimal? @default(0) @map("valor_recebido") @db.Decimal(12, 2)
+  custoEstimado  Decimal? @map("custo_estimado") @db.Decimal(12, 2)
+  custoReal      Decimal? @map("custo_real") @db.Decimal(12, 2)
+  margemEstimada Decimal? @map("margem_estimada") @db.Decimal(5, 2)
+  obsFinanceiras String?  @map("obs_financeiras") @db.Text
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
   // Relations
-  os              OS                   @relation(fields: [osId], references: [id], onDelete: Cascade)
-  atividades      Atividade[]
-  hospedagens     Hospedagem[]
-  transportes     Transporte[]
-  passagensAereas PassagemAerea[]
-  guias           GuiaDesignacao[]
-  motoristas      MotoristaDesignacao[]
-  fornecedores    OSFornecedor[]
+  os                     OS                     @relation(fields: [osId], references: [id], onDelete: Cascade)
+  atividades             Atividade[]
+  hospedagens            Hospedagem[]
+  transportes            Transporte[]
+  passagensAereas        PassagemAerea[]
+  guias                  GuiaDesignacao[]
+  motoristas             MotoristaDesignacao[]
+  fornecedores           OSFornecedor[]
   lancamentosFinanceiros LancamentoFinanceiro[]
   pagamentos             PagamentoOS[]
   auditorias             AuditoriaOS[]
   historicoStatus        HistoricoStatus[]
+  participantes          Participante[]
 
   @@index([osId])
   @@index([dataInicio])
-  participantes Participante[]
   @@map("os_extensoes")
 }
 
 model Participante {
-  id                  String    @id @default(uuid())
-  osId                String    @map("os_id")
-  nome                String
-  email               String
-  telefone            String?
-  passaporteNumero    String?   @map("passaporte_numero")
-  passaporteValidade  DateTime? @map("passaporte_validade") @db.Date
-  alergias            String?
-  restricoes          String?
-  preferencias        String?
-  idade               Int?
-  observacoes         String?
-  
+  id                 String    @id @default(uuid())
+  osId               String    @map("os_id")
+  nome               String
+  email              String
+  telefone           String?
+  passaporteNumero   String?   @map("passaporte_numero")
+  passaporteValidade DateTime? @map("passaporte_validade") @db.Date
+  alergias           String?
+  restricoes         String?
+  preferencias       String?
+  idade              Int?
+  observacoes        String?
+
   // Arquivos/Documentos
-  documentos          Json?     // Array de { url, key, fileName, contentType, uploadedAt }
-  
-  createdAt           DateTime  @default(now()) @map("created_at")
-  updatedAt           DateTime  @updatedAt @map("updated_at")
+  documentos Json? // Array de { url, key, fileName, contentType, uploadedAt }
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
   // Relations
-  os OS @relation(fields: [osId], references: [id], onDelete: Cascade)
+  os        OS           @relation(fields: [osId], references: [id], onDelete: Cascade)
   extensoes OSExtensao[]
 
   @@index([osId])
@@ -441,17 +445,17 @@ model Participante {
 }
 
 model OSFornecedor {
-  id              String                 @id @default(uuid())
-  osId            String                 @map("os_id")
-  fornecedorId    String                 @map("fornecedor_id")
+  id              String                @id @default(uuid())
+  osId            String                @map("os_id")
+  fornecedorId    String                @map("fornecedor_id")
   categoria       CategoriaOSFornecedor
-  contatoNome     String?                @map("contato_nome")
-  contatoEmail    String?                @map("contato_email")
-  contatoTelefone String?                @map("contato_telefone")
-  contratoRef     String?                @map("contrato_ref")
-  extensaoId      String?                @map("extensao_id")
-  createdAt       DateTime               @default(now()) @map("created_at")
-  updatedAt       DateTime               @updatedAt @map("updated_at")
+  contatoNome     String?               @map("contato_nome")
+  contatoEmail    String?               @map("contato_email")
+  contatoTelefone String?               @map("contato_telefone")
+  contratoRef     String?               @map("contrato_ref")
+  extensaoId      String?               @map("extensao_id")
+  createdAt       DateTime              @default(now()) @map("created_at")
+  updatedAt       DateTime              @updatedAt @map("updated_at")
 
   // Relations
   os         OS          @relation(fields: [osId], references: [id], onDelete: Cascade)
@@ -466,18 +470,18 @@ model OSFornecedor {
 }
 
 model Atividade {
-  id                String         @id @default(uuid())
-  osId              String         @map("os_id")
-  tipo              TipoAtividade  @default(atividade)
-  nome              String
-  valor             Decimal?       @db.Decimal(12, 2)
-  moeda             Moeda          @default(BRL)
-  localizacao       String?
-  quantidadeMaxima  Int?           @map("quantidade_maxima")
-  data              DateTime?      @db.Date
-  hora              DateTime?      @db.Time
-  fornecedorId      String?        @map("fornecedor_id")
-  notas             String?
+  id               String        @id @default(uuid())
+  osId             String        @map("os_id")
+  tipo             TipoAtividade @default(atividade)
+  nome             String
+  valor            Decimal?      @db.Decimal(12, 2)
+  moeda            Moeda         @default(BRL)
+  localizacao      String?
+  quantidadeMaxima Int?          @map("quantidade_maxima")
+  data             DateTime?     @db.Date
+  hora             DateTime?     @db.Time
+  fornecedorId     String?       @map("fornecedor_id")
+  notas            String?
 
   // Controle de Pagamento
   statusPagamento     StatusPagamento @default(pendente) @map("status_pagamento")
@@ -487,10 +491,10 @@ model Atividade {
   extensaoId          String?         @map("extensao_id")
 
   // Arquivos (vouchers, confirmações)
-  arquivos          Json?       // Array de { url, key, fileName, contentType, uploadedAt }
+  arquivos Json? // Array de { url, key, fileName, contentType, uploadedAt }
 
-  createdAt         DateTime    @default(now()) @map("created_at")
-  updatedAt         DateTime    @updatedAt @map("updated_at")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
   // Relations
   os         OS          @relation(fields: [osId], references: [id], onDelete: Cascade)
@@ -508,20 +512,20 @@ model Atividade {
 }
 
 model Hospedagem {
-  id            String             @id @default(uuid())
-  osId          String             @map("os_id")
-  fornecedorId  String             @map("fornecedor_id")
-  tarifaId      String?            @map("tarifa_id")
-  hotelNome     String             @map("hotel_nome")
-  checkin       DateTime
-  checkout      DateTime
-  quartos       Int?
-  tipoQuarto    String?            @map("tipo_quarto")
-  regime        RegimeHospedagem?
-  custoTotal    Decimal?           @map("custo_total") @db.Decimal(12, 2)
-  moeda         Moeda              @default(BRL)
-  observacoes   String?            @db.Text
-  reservasRefs  Json?              @map("reservas_refs")
+  id           String            @id @default(uuid())
+  osId         String            @map("os_id")
+  fornecedorId String            @map("fornecedor_id")
+  tarifaId     String?           @map("tarifa_id")
+  hotelNome    String            @map("hotel_nome")
+  checkin      DateTime
+  checkout     DateTime
+  quartos      Int?
+  tipoQuarto   String?           @map("tipo_quarto")
+  regime       RegimeHospedagem?
+  custoTotal   Decimal?          @map("custo_total") @db.Decimal(12, 2)
+  moeda        Moeda             @default(BRL)
+  observacoes  String?           @db.Text
+  reservasRefs Json?             @map("reservas_refs")
 
   // Controle de Pagamento
   statusPagamento     StatusPagamento @default(pendente) @map("status_pagamento")
@@ -531,16 +535,16 @@ model Hospedagem {
   extensaoId          String?         @map("extensao_id")
 
   // Arquivos (vouchers, confirmações)
-  arquivos      Json?              // Array de { url, key, fileName, contentType, uploadedAt }
+  arquivos Json? // Array de { url, key, fileName, contentType, uploadedAt }
 
-  createdAt     DateTime           @default(now()) @map("created_at")
-  updatedAt     DateTime           @updatedAt @map("updated_at")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
   // Relations
-  os         OS                 @relation(fields: [osId], references: [id], onDelete: Cascade)
-  extensao   OSExtensao?        @relation(fields: [extensaoId], references: [id])
-  fornecedor Fornecedor         @relation(fields: [fornecedorId], references: [id])
-  tarifa     FornecedorTarifa?  @relation(fields: [tarifaId], references: [id])
+  os         OS                @relation(fields: [osId], references: [id], onDelete: Cascade)
+  extensao   OSExtensao?       @relation(fields: [extensaoId], references: [id])
+  fornecedor Fornecedor        @relation(fields: [fornecedorId], references: [id])
+  tarifa     FornecedorTarifa? @relation(fields: [tarifaId], references: [id])
 
   @@index([osId])
   @@index([fornecedorId])
@@ -553,17 +557,17 @@ model Hospedagem {
 }
 
 model Transporte {
-  id           String          @id @default(uuid())
-  osId         String          @map("os_id")
+  id           String         @id @default(uuid())
+  osId         String         @map("os_id")
   tipo         TipoTransporte
-  fornecedorId String?         @map("fornecedor_id")
+  fornecedorId String?        @map("fornecedor_id")
   origem       String?
   destino      String?
-  dataPartida  DateTime?       @map("data_partida")
-  dataChegada  DateTime?       @map("data_chegada")
-  custo        Decimal?        @db.Decimal(12, 2)
-  moeda        Moeda           @default(BRL)
-  extensaoId   String?         @map("extensao_id")
+  dataPartida  DateTime?      @map("data_partida")
+  dataChegada  DateTime?      @map("data_chegada")
+  custo        Decimal?       @db.Decimal(12, 2)
+  moeda        Moeda          @default(BRL)
+  extensaoId   String?        @map("extensao_id")
   detalhes     Json?
 
   // Controle de Pagamento
@@ -573,10 +577,10 @@ model Transporte {
   referenciaPagamento String?         @map("referencia_pagamento")
 
   // Arquivos (vouchers, confirmações)
-  arquivos     Json?           // Array de { url, key, fileName, contentType, uploadedAt }
+  arquivos Json? // Array de { url, key, fileName, contentType, uploadedAt }
 
-  createdAt    DateTime        @default(now()) @map("created_at")
-  updatedAt    DateTime        @updatedAt @map("updated_at")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
   // Relations
   os         OS          @relation(fields: [osId], references: [id], onDelete: Cascade)
@@ -593,18 +597,18 @@ model Transporte {
 }
 
 model PassagemAerea {
-  id           String                  @id @default(uuid())
-  osId         String                  @map("os_id")
-  categoria    CategoriaPassagemAerea
-  passageiroNome String                @map("passageiro_nome")
-  cia          String?
-  pnr          String?
-  trecho       String?
-  dataPartida  DateTime?               @map("data_partida")
-  dataChegada  DateTime?               @map("data_chegada")
-  custo        Decimal?                @db.Decimal(12, 2)
-  moeda        Moeda                   @default(BRL)
-  extensaoId   String?                 @map("extensao_id")
+  id             String                 @id @default(uuid())
+  osId           String                 @map("os_id")
+  categoria      CategoriaPassagemAerea
+  passageiroNome String                 @map("passageiro_nome")
+  cia            String?
+  pnr            String?
+  trecho         String?
+  dataPartida    DateTime?              @map("data_partida")
+  dataChegada    DateTime?              @map("data_chegada")
+  custo          Decimal?               @db.Decimal(12, 2)
+  moeda          Moeda                  @default(BRL)
+  extensaoId     String?                @map("extensao_id")
 
   // Controle de Pagamento
   statusPagamento     StatusPagamento @default(pendente) @map("status_pagamento")
@@ -613,10 +617,10 @@ model PassagemAerea {
   referenciaPagamento String?         @map("referencia_pagamento")
 
   // Arquivos (bilhetes, vouchers)
-  arquivos     Json?                   // Array de { url, key, fileName, contentType, uploadedAt }
+  arquivos Json? // Array de { url, key, fileName, contentType, uploadedAt }
 
-  createdAt    DateTime                @default(now()) @map("created_at")
-  updatedAt    DateTime                @updatedAt @map("updated_at")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
   // Relations
   os       OS          @relation(fields: [osId], references: [id], onDelete: Cascade)
@@ -630,31 +634,31 @@ model PassagemAerea {
 }
 
 model GuiaDesignacao {
-  id        String   @id @default(uuid())
-  osId      String   @map("os_id")
-  extensaoId String? @map("extensao_id")
-  guiaId    String   @map("guia_id")
-  funcao    String?
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
+  id         String   @id @default(uuid())
+  osId       String   @map("os_id")
+  extensaoId String?  @map("extensao_id")
+  guiaId     String   @map("guia_id")
+  funcao     String?
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
 
   // Relations
-  os   OS          @relation(fields: [osId], references: [id], onDelete: Cascade)
+  os       OS          @relation(fields: [osId], references: [id], onDelete: Cascade)
   extensao OSExtensao? @relation(fields: [extensaoId], references: [id])
-  guia Usuario     @relation(fields: [guiaId], references: [id])
+  guia     Usuario     @relation(fields: [guiaId], references: [id])
 
   @@unique([osId, guiaId, extensaoId])
   @@map("os_guias_designacao")
 }
 
 model MotoristaDesignacao {
-  id           String          @id @default(uuid())
-  osId         String          @map("os_id")
-  motoristaId  String          @map("motorista_id")
-  extensaoId   String?         @map("extensao_id")
-  veiculoTipo  TipoTransporte? @map("veiculo_tipo")
-  createdAt    DateTime        @default(now()) @map("created_at")
-  updatedAt    DateTime        @updatedAt @map("updated_at")
+  id          String          @id @default(uuid())
+  osId        String          @map("os_id")
+  motoristaId String          @map("motorista_id")
+  extensaoId  String?         @map("extensao_id")
+  veiculoTipo TipoTransporte? @map("veiculo_tipo")
+  createdAt   DateTime        @default(now()) @map("created_at")
+  updatedAt   DateTime        @updatedAt @map("updated_at")
 
   // Relations
   os        OS          @relation(fields: [osId], references: [id], onDelete: Cascade)
@@ -666,15 +670,15 @@ model MotoristaDesignacao {
 }
 
 model Scouting {
-  id           String   @id @default(uuid())
-  osId         String   @map("os_id")
-  autorId      String   @map("autor_id")
-  titulo       String
-  descricao    String?
-  roteiroJson  Json?    @map("roteiro_json")
-  anexos       Json?
-  createdAt    DateTime @default(now()) @map("created_at")
-  updatedAt    DateTime @updatedAt @map("updated_at")
+  id          String   @id @default(uuid())
+  osId        String   @map("os_id")
+  autorId     String   @map("autor_id")
+  titulo      String
+  descricao   String?
+  roteiroJson Json?    @map("roteiro_json")
+  anexos      Json?
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
 
   // Relations
   os    OS      @relation(fields: [osId], references: [id], onDelete: Cascade)
@@ -687,21 +691,21 @@ model Scouting {
 }
 
 model LancamentoFinanceiro {
-  id                   String               @id @default(uuid())
-  orgId                String               @map("org_id")
-  osId                 String?              @map("os_id")
-  referenciaUsuarioId  String?              @map("referencia_usuario_id")
-  fornecedorId         String?              @map("fornecedor_id")
-  tipo                 TipoLancamento
-  categoria            CategoriaLancamento
-  valor                Decimal              @db.Decimal(12, 2)
-  moeda                Moeda                @default(BRL)
-  data                 DateTime             @db.Date
-  observacao           String?
-  comprovanteUrl       String?              @map("comprovante_url")
-  createdBy            String               @map("created_by")
-  createdAt            DateTime             @default(now()) @map("created_at")
-  updatedAt            DateTime             @updatedAt @map("updated_at")
+  id                  String              @id @default(uuid())
+  orgId               String              @map("org_id")
+  osId                String?             @map("os_id")
+  referenciaUsuarioId String?             @map("referencia_usuario_id")
+  fornecedorId        String?             @map("fornecedor_id")
+  tipo                TipoLancamento
+  categoria           CategoriaLancamento
+  valor               Decimal             @db.Decimal(12, 2)
+  moeda               Moeda               @default(BRL)
+  data                DateTime            @db.Date
+  observacao          String?
+  comprovanteUrl      String?             @map("comprovante_url")
+  createdBy           String              @map("created_by")
+  createdAt           DateTime            @default(now()) @map("created_at")
+  updatedAt           DateTime            @updatedAt @map("updated_at")
 
   // Relations
   organizacao       Organizacao @relation(fields: [orgId], references: [id], onDelete: Cascade)
@@ -725,41 +729,41 @@ model LancamentoFinanceiro {
 // ============================================
 
 model PagamentoOS {
-  id              String          @id @default(uuid())
-  orgId           String          @map("org_id")
-  osId            String          @map("os_id")
+  id    String @id @default(uuid())
+  orgId String @map("org_id")
+  osId  String @map("os_id")
 
   // Tipo: 'entrada' (recebimento do cliente) ou 'saida' (pagamento a fornecedor)
-  tipo            String          // 'entrada' | 'saida'
-  descricao       String          // Ex: "Entrada 30%", "Saldo 70%", "Pagamento Hotel"
+  tipo      String // 'entrada' | 'saida'
+  descricao String // Ex: "Entrada 30%", "Saldo 70%", "Pagamento Hotel"
 
   // Valores
-  valor           Decimal         @db.Decimal(12, 2)
-  moeda           Moeda           @default(BRL)
+  valor Decimal @db.Decimal(12, 2)
+  moeda Moeda   @default(BRL)
 
   // Datas
-  dataVencimento  DateTime        @map("data_vencimento") @db.Date
-  dataPagamento   DateTime?       @map("data_pagamento") @db.Date
+  dataVencimento DateTime  @map("data_vencimento") @db.Date
+  dataPagamento  DateTime? @map("data_pagamento") @db.Date
 
   // Status
-  status          StatusPagamento @default(pendente)
-  
+  status StatusPagamento @default(pendente)
+
   // Percentual do pagamento (usado quando status = 'parcial')
-  percentualParcial Decimal?      @map("percentual_parcial") @db.Decimal(5, 2) // Ex: 30.00 para 30%
+  percentualParcial Decimal? @map("percentual_parcial") @db.Decimal(5, 2) // Ex: 30.00 para 30%
 
   // Detalhes do pagamento
-  formaPagamento  String?         @map("forma_pagamento") // pix, cartao_credito, boleto, dinheiro, transferencia
-  referencia      String?         // Número de referência, transação, nota fiscal, etc
-  comprovanteUrl  String?         @map("comprovante_url")
+  formaPagamento String? @map("forma_pagamento") // pix, cartao_credito, boleto, dinheiro, transferencia
+  referencia     String? // Número de referência, transação, nota fiscal, etc
+  comprovanteUrl String? @map("comprovante_url")
 
   // Relacionamento (opcional) com fornecedor para pagamentos de saída
-  fornecedorId    String?         @map("fornecedor_id")
+  fornecedorId String? @map("fornecedor_id")
 
   // Observações
-  observacoes     String?         @db.Text
+  observacoes String? @db.Text
 
-  createdAt       DateTime        @default(now()) @map("created_at")
-  updatedAt       DateTime        @updatedAt @map("updated_at")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
   // Relations
   organizacao Organizacao @relation(fields: [orgId], references: [id], onDelete: Cascade)
@@ -808,10 +812,10 @@ model HistoricoStatus {
   createdAt   DateTime  @default(now()) @map("created_at")
 
   // Relations
-  os      OS      @relation(fields: [osId], references: [id], onDelete: Cascade)
-  extensaoId String? @map("extensao_id")
-  extensao OSExtensao? @relation(fields: [extensaoId], references: [id])
-  usuario Usuario @relation(fields: [alteradoPor], references: [id])
+  os         OS          @relation(fields: [osId], references: [id], onDelete: Cascade)
+  extensaoId String?     @map("extensao_id")
+  extensao   OSExtensao? @relation(fields: [extensaoId], references: [id])
+  usuario    Usuario     @relation(fields: [alteradoPor], references: [id])
 
   @@index([osId])
   @@index([extensaoId])
@@ -820,17 +824,17 @@ model HistoricoStatus {
 }
 
 model EventoCalendario {
-  id            String                @id @default(uuid())
-  orgId         String                @map("org_id")
-  osId          String                @map("os_id")
-  titulo        String
-  tipo          TipoEventoCalendario
-  inicio        DateTime
-  fim           DateTime?
-  recurso       RecursoCalendario?
-  recursoRefId  String?               @map("recurso_ref_id")
-  createdAt     DateTime              @default(now()) @map("created_at")
-  updatedAt     DateTime              @updatedAt @map("updated_at")
+  id           String               @id @default(uuid())
+  orgId        String               @map("org_id")
+  osId         String               @map("os_id")
+  titulo       String
+  tipo         TipoEventoCalendario
+  inicio       DateTime
+  fim          DateTime?
+  recurso      RecursoCalendario?
+  recursoRefId String?              @map("recurso_ref_id")
+  createdAt    DateTime             @default(now()) @map("created_at")
+  updatedAt    DateTime             @updatedAt @map("updated_at")
 
   // Relations
   organizacao Organizacao @relation(fields: [orgId], references: [id], onDelete: Cascade)
@@ -859,14 +863,14 @@ model PresetCategory {
   nome      String
   tipo      PresetTipo
   parentId  String?    @map("parent_id")
-  ordem     Int?       
+  ordem     Int?
   ativo     Boolean    @default(true)
   createdAt DateTime   @default(now()) @map("created_at")
   updatedAt DateTime   @updatedAt @map("updated_at")
 
   // Relations
-  organizacao Organizacao   @relation(fields: [orgId], references: [id], onDelete: Cascade)
-  parent      PresetCategory? @relation("PresetCategoryToParent", fields: [parentId], references: [id])
+  organizacao Organizacao      @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  parent      PresetCategory?  @relation("PresetCategoryToParent", fields: [parentId], references: [id])
   children    PresetCategory[] @relation("PresetCategoryToParent")
   items       PresetItem[]
 
@@ -878,22 +882,22 @@ model PresetCategory {
 }
 
 model PresetItem {
-  id          String      @id @default(uuid())
-  orgId       String      @map("org_id")
-  categoriaId String?     @map("categoria_id")
+  id          String     @id @default(uuid())
+  orgId       String     @map("org_id")
+  categoriaId String?    @map("categoria_id")
   tipo        PresetTipo
   label       String
   descricao   String?
   ordem       Int?
-  ativo       Boolean     @default(true)
-  usoCount    Int         @default(0) @map("uso_count")
-  ultimoUso   DateTime?   @map("ultimo_uso")
-  createdAt   DateTime    @default(now()) @map("created_at")
-  updatedAt   DateTime    @updatedAt @map("updated_at")
+  ativo       Boolean    @default(true)
+  usoCount    Int        @default(0) @map("uso_count")
+  ultimoUso   DateTime?  @map("ultimo_uso")
+  createdAt   DateTime   @default(now()) @map("created_at")
+  updatedAt   DateTime   @updatedAt @map("updated_at")
 
   // Relations
-  organizacao Organizacao  @relation(fields: [orgId], references: [id], onDelete: Cascade)
-  categoria   PresetCategory? @relation(fields: [categoriaId], references: [id])
+  organizacao   Organizacao          @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  categoria     PresetCategory?      @relation(fields: [categoriaId], references: [id])
   templateItems PresetTemplateItem[]
 
   @@index([orgId])
@@ -910,19 +914,19 @@ model PresetItem {
 // ============================================
 
 model PresetTemplate {
-  id          String      @id @default(uuid())
-  orgId       String      @map("org_id")
-  nome        String
-  descricao   String?
-  tipo        PresetTipo
-  ativo       Boolean     @default(true)
-  usoCount    Int         @default(0) @map("uso_count")
-  ultimoUso   DateTime?   @map("ultimo_uso")
-  createdAt   DateTime    @default(now()) @map("created_at")
-  updatedAt   DateTime    @updatedAt @map("updated_at")
+  id        String     @id @default(uuid())
+  orgId     String     @map("org_id")
+  nome      String
+  descricao String?
+  tipo      PresetTipo
+  ativo     Boolean    @default(true)
+  usoCount  Int        @default(0) @map("uso_count")
+  ultimoUso DateTime?  @map("ultimo_uso")
+  createdAt DateTime   @default(now()) @map("created_at")
+  updatedAt DateTime   @updatedAt @map("updated_at")
 
   // Relations
-  organizacao Organizacao @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  organizacao Organizacao          @relation(fields: [orgId], references: [id], onDelete: Cascade)
   items       PresetTemplateItem[]
 
   @@index([orgId])
@@ -933,11 +937,11 @@ model PresetTemplate {
 }
 
 model PresetTemplateItem {
-  id         String         @id @default(uuid())
-  templateId String         @map("template_id")
-  itemId     String         @map("item_id")
+  id         String   @id @default(uuid())
+  templateId String   @map("template_id")
+  itemId     String   @map("item_id")
   ordem      Int?
-  createdAt  DateTime       @default(now()) @map("created_at")
+  createdAt  DateTime @default(now()) @map("created_at")
 
   // Relations
   template PresetTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
@@ -954,38 +958,38 @@ model PresetTemplateItem {
 // ============================================
 
 model AuditoriaOS {
-  id           String            @id @default(uuid())
-  orgId        String            @map("org_id")
-  osId         String            @map("os_id")
+  id    String @id @default(uuid())
+  orgId String @map("org_id")
+  osId  String @map("os_id")
 
   // Quem fez a ação
-  usuarioId    String            @map("usuario_id")
-  usuarioNome  String            @map("usuario_nome") // Snapshot do nome no momento da ação
-  usuarioRole  RoleGlobal        @map("usuario_role") // Snapshot do role no momento da ação
+  usuarioId   String     @map("usuario_id")
+  usuarioNome String     @map("usuario_nome") // Snapshot do nome no momento da ação
+  usuarioRole RoleGlobal @map("usuario_role") // Snapshot do role no momento da ação
 
   // O que foi feito
-  acao         AcaoAuditoria
-  entidade     EntidadeAuditoria
-  entidadeId   String?           @map("entidade_id") // ID do registro afetado (participante, atividade, etc)
+  acao       AcaoAuditoria
+  entidade   EntidadeAuditoria
+  entidadeId String?           @map("entidade_id") // ID do registro afetado (participante, atividade, etc)
 
   // Detalhes da alteração
-  dadosAntigos Json?             @map("dados_antigos") // Estado antes da alteração
-  dadosNovos   Json?             @map("dados_novos")   // Estado depois da alteração
-  campos       String[]          // Lista de campos que foram alterados
+  dadosAntigos Json?    @map("dados_antigos") // Estado antes da alteração
+  dadosNovos   Json?    @map("dados_novos") // Estado depois da alteração
+  campos       String[] // Lista de campos que foram alterados
 
   // Contexto adicional
-  descricao    String?           // Descrição legível da ação
-  metadata     Json?             // Informações extras (IP, user-agent, duração, etc)
+  descricao String? // Descrição legível da ação
+  metadata  Json? // Informações extras (IP, user-agent, duração, etc)
 
   // Quando aconteceu
-  createdAt    DateTime          @default(now()) @map("created_at")
+  createdAt DateTime @default(now()) @map("created_at")
 
   // Relations
-  organizacao  Organizacao       @relation(fields: [orgId], references: [id], onDelete: Cascade)
-  os           OS                @relation(fields: [osId], references: [id], onDelete: Cascade)
-  extensaoId   String?           @map("extensao_id")
-  extensao     OSExtensao?       @relation(fields: [extensaoId], references: [id])
-  usuario      Usuario           @relation(fields: [usuarioId], references: [id])
+  organizacao Organizacao @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  os          OS          @relation(fields: [osId], references: [id], onDelete: Cascade)
+  extensaoId  String?     @map("extensao_id")
+  extensao    OSExtensao? @relation(fields: [extensaoId], references: [id])
+  usuario     Usuario     @relation(fields: [usuarioId], references: [id])
 
   @@index([orgId])
   @@index([osId])
@@ -996,7 +1000,7 @@ model AuditoriaOS {
   @@index([entidadeId])
   @@index([createdAt])
   @@index([osId, createdAt]) // Índice composto para queries de timeline
-  @@index([osId, entidade])  // Índice composto para filtrar por entidade em uma OS
+  @@index([osId, entidade]) // Índice composto para filtrar por entidade em uma OS
   @@map("auditoria_os")
 }
 
@@ -1005,23 +1009,23 @@ model AuditoriaOS {
 // ============================================
 
 model OrganizacaoPolicy {
-  id          String     @id @default(uuid())
-  orgId       String     @map("org_id")
-  nome        String
-  descricao   String?
-  versao      Int        @default(1)
-  ativa       Boolean    @default(false)
+  id        String  @id @default(uuid())
+  orgId     String  @map("org_id")
+  nome      String
+  descricao String?
+  versao    Int     @default(1)
+  ativa     Boolean @default(false)
 
   // Blocos de configuração (JSON para flexibilidade e evolução)
-  financeiro  Json       // { margemMinimaPercentual: number, entradaMinimaPercentual: number, toleranciaCustoRealAcimaEstimadoPercentual: number }
-  prazos      Json       // { prazoMinimoGuiaDias: number, prazoMinimoMotoristaDias: number, prazoMinimoHospedagemDias: number }
+  financeiro          Json // { margemMinimaPercentual: number, entradaMinimaPercentual: number, toleranciaCustoRealAcimaEstimadoPercentual: number }
+  prazos              Json // { prazoMinimoGuiaDias: number, prazoMinimoMotoristaDias: number, prazoMinimoHospedagemDias: number }
   checklistsOverrides Json? @map("checklists_overrides") // Overrides por transição de status
 
-  createdAt   DateTime   @default(now()) @map("created_at")
-  updatedAt   DateTime   @updatedAt @map("updated_at")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
   // Relations
-  organizacao Organizacao @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  organizacao Organizacao        @relation(fields: [orgId], references: [id], onDelete: Cascade)
   osSnapshots OSPolicySnapshot[]
 
   @@index([orgId])
@@ -1060,32 +1064,32 @@ enum StatusCotacao {
 }
 
 model Cotacao {
-  id                   String         @id @default(uuid())
-  orgId                String         @map("org_id")
-  titulo               String
-  clienteNome          String         @map("cliente_nome")
-  clienteEmail         String?        @map("cliente_email")
-  clienteTelefone      String?        @map("cliente_telefone")
-  destino              String
-  dataInicio           DateTime?      @map("data_inicio") @db.Date
-  dataFim              DateTime?      @map("data_fim") @db.Date
-  statusCotacao        StatusCotacao  @default(rascunho) @map("status_cotacao")
-  observacoesInternas  String?        @map("observacoes_internas") @db.Text
-  observacoesCliente   String?        @map("observacoes_cliente") @db.Text
-  responsavelId        String         @map("responsavel_id")
-  valorTotal           Decimal?       @map("valor_total") @db.Decimal(12, 2)
-  moeda                Moeda          @default(BRL)
-  
+  id                  String        @id @default(uuid())
+  orgId               String        @map("org_id")
+  titulo              String
+  clienteNome         String        @map("cliente_nome")
+  clienteEmail        String?       @map("cliente_email")
+  clienteTelefone     String?       @map("cliente_telefone")
+  destino             String
+  dataInicio          DateTime?     @map("data_inicio") @db.Date
+  dataFim             DateTime?     @map("data_fim") @db.Date
+  statusCotacao       StatusCotacao @default(rascunho) @map("status_cotacao")
+  observacoesInternas String?       @map("observacoes_internas") @db.Text
+  observacoesCliente  String?       @map("observacoes_cliente") @db.Text
+  responsavelId       String        @map("responsavel_id")
+  valorTotal          Decimal?      @map("valor_total") @db.Decimal(12, 2)
+  moeda               Moeda         @default(BRL)
+
   // Arquivos (propostas PDF, anexos)
-  arquivos             Json?          // Array de { url, key, fileName, contentType, uploadedAt }
-  
-  createdAt            DateTime       @default(now()) @map("created_at")
-  updatedAt            DateTime       @updatedAt @map("updated_at")
+  arquivos Json? // Array de { url, key, fileName, contentType, uploadedAt }
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
   // Relations
-  organizacao   Organizacao      @relation(fields: [orgId], references: [id], onDelete: Cascade)
-  responsavel   Usuario          @relation(fields: [responsavelId], references: [id])
-  itens         CotacaoItem[]
+  organizacao Organizacao   @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  responsavel Usuario       @relation(fields: [responsavelId], references: [id])
+  itens       CotacaoItem[]
 
   @@index([orgId])
   @@index([responsavelId])
@@ -1103,26 +1107,130 @@ enum CategoriaCotacaoItem {
 }
 
 model CotacaoItem {
-  id              String                @id @default(uuid())
-  cotacaoId       String                @map("cotacao_id")
-  categoria       CategoriaCotacaoItem
-  fornecedorId    String?               @map("fornecedor_id")
-  tarifaId        String?               @map("tarifa_id")
-  descricao       String
-  quantidade      Int
-  valorUnitario   Decimal               @map("valor_unitario") @db.Decimal(12, 2)
-  moeda           Moeda                 @default(BRL)
-  subtotal        Decimal               @db.Decimal(12, 2)
-  observacoes     String?               @db.Text
-  createdAt       DateTime              @default(now()) @map("created_at")
-  updatedAt       DateTime              @updatedAt @map("updated_at")
+  id            String               @id @default(uuid())
+  cotacaoId     String               @map("cotacao_id")
+  categoria     CategoriaCotacaoItem
+  fornecedorId  String?              @map("fornecedor_id")
+  tarifaId      String?              @map("tarifa_id")
+  descricao     String
+  quantidade    Int
+  valorUnitario Decimal              @map("valor_unitario") @db.Decimal(12, 2)
+  moeda         Moeda                @default(BRL)
+  subtotal      Decimal              @db.Decimal(12, 2)
+  observacoes   String?              @db.Text
+  createdAt     DateTime             @default(now()) @map("created_at")
+  updatedAt     DateTime             @updatedAt @map("updated_at")
 
   // Relations
-  cotacao     Cotacao      @relation(fields: [cotacaoId], references: [id], onDelete: Cascade)
-  fornecedor  Fornecedor?  @relation(fields: [fornecedorId], references: [id])
+  cotacao    Cotacao     @relation(fields: [cotacaoId], references: [id], onDelete: Cascade)
+  fornecedor Fornecedor? @relation(fields: [fornecedorId], references: [id])
 
   @@index([cotacaoId])
   @@index([fornecedorId])
   @@index([categoria])
   @@map("cotacao_itens")
+}
+
+// ============================================
+// CONTAS DE PAGAMENTO (Para Invoices)
+// ============================================
+
+model ContaPagamento {
+  id           String   @id @default(uuid())
+  orgId        String   @map("org_id")
+  nome         String // Nome da conta (ex: "Banco do Brasil - Conta Corrente")
+  banco        String? // Nome do banco
+  agencia      String? // Número da agência
+  conta        String? // Número da conta
+  tipoConta    String?  @map("tipo_conta") // corrente, poupanca, pagamento
+  titular      String? // Nome do titular
+  documento    String? // CPF/CNPJ do titular
+  chavePix     String?  @map("chave_pix") // Chave PIX (se aplicável)
+  tipoChavePix String?  @map("tipo_chave_pix") // cpf, cnpj, email, telefone, aleatoria
+  ativo        Boolean  @default(true)
+  padrao       Boolean  @default(false) // Conta padrão para invoices
+  observacoes  String?  @db.Text
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  organizacao Organizacao @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  invoices    Invoice[]
+
+  @@index([orgId])
+  @@index([ativo])
+  @@index([padrao])
+  @@map("contas_pagamento")
+}
+
+// ============================================
+// INVOICES (Faturas/Notas Geradas)
+// ============================================
+
+enum StatusInvoice {
+  rascunho
+  enviado
+  pago
+  cancelado
+  vencido
+}
+
+model Invoice {
+  id        String  @id @default(uuid())
+  orgId     String  @map("org_id")
+  numero    String // Número sequencial do invoice
+  osId      String? @map("os_id")
+  cotacaoId String? @map("cotacao_id")
+
+  // Informações do Cliente
+  clienteNome      String  @map("cliente_nome")
+  clienteEmail     String? @map("cliente_email")
+  clienteTelefone  String? @map("cliente_telefone")
+  clienteDocumento String? @map("cliente_documento")
+  clienteEndereco  String? @map("cliente_endereco") @db.Text
+
+  // Detalhes do Invoice
+  titulo         String
+  descricao      String?       @db.Text
+  dataEmissao    DateTime      @map("data_emissao") @db.Date
+  dataVencimento DateTime?     @map("data_vencimento") @db.Date
+  status         StatusInvoice @default(rascunho)
+
+  // Valores
+  valorTotal Decimal @map("valor_total") @db.Decimal(12, 2)
+  moeda      Moeda   @default(BRL)
+
+  // Conta de Pagamento
+  contaPagamentoId String? @map("conta_pagamento_id")
+
+  // Itens selecionados (JSON com referências aos serviços incluídos)
+  itensIncluidos Json @map("itens_incluidos") // { hospedagens: [], atividades: [], transportes: [], etc }
+
+  // Observações e Termos
+  observacoes     String? @db.Text
+  termosCondicoes String? @map("termos_condicoes") @db.Text
+
+  // Arquivos gerados
+  pdfUrl String? @map("pdf_url")
+  pdfKey String? @map("pdf_key")
+
+  createdBy String   @map("created_by")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  organizacao    Organizacao     @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  os             OS?             @relation(fields: [osId], references: [id])
+  contaPagamento ContaPagamento? @relation(fields: [contaPagamentoId], references: [id])
+  criador        Usuario         @relation(fields: [createdBy], references: [id])
+
+  @@unique([orgId, numero])
+  @@index([orgId])
+  @@index([osId])
+  @@index([cotacaoId])
+  @@index([status])
+  @@index([dataEmissao])
+  @@index([dataVencimento])
+  @@index([createdBy])
+  @@map("invoices")
 }

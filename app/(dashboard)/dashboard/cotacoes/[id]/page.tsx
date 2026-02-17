@@ -19,11 +19,13 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { useToast } from "@/hooks/useToast"
-import { ArrowLeft, Save, Trash2, Copy, FileText, Send, Download } from "lucide-react"
+import { ArrowLeft, Save, Trash2, Copy, FileText, Send, Download, Receipt } from "lucide-react"
 import { CotacaoHospedagensSection } from "@/components/cotacoes/sections/CotacaoHospedagensSection"
 import { CotacaoAtividadesSection } from "@/components/cotacoes/sections/CotacaoAtividadesSection"
 import { CotacaoTransportesSection } from "@/components/cotacoes/sections/CotacaoTransportesSection"
 import { CotacaoAlimentacaoSection } from "@/components/cotacoes/sections/CotacaoAlimentacaoSection"
+import { GenerateInvoiceDialog } from "@/components/invoices/GenerateInvoiceDialog"
+import { InvoiceHistory } from "@/components/invoices/InvoiceHistory"
 
 const editCotacaoSchema = z.object({
   titulo: z.string().min(3, "Título deve ter no mínimo 3 caracteres"),
@@ -67,6 +69,7 @@ export default function CotacaoDetalhesPage() {
   const [atividades, setAtividades] = useState<any[]>([])
   const [transportes, setTransportes] = useState<any[]>([])
   const [alimentacoes, setAlimentacoes] = useState<any[]>([])
+  const [isInvoiceDialogOpen, setIsInvoiceDialogOpen] = useState(false)
 
   const {
     register,
@@ -328,6 +331,10 @@ export default function CotacaoDetalhesPage() {
             <Send className="h-4 w-4 mr-2" />
             Enviar Email
           </Button>
+          <Button variant="outline" size="sm" onClick={() => setIsInvoiceDialogOpen(true)}>
+            <Receipt className="h-4 w-4 mr-2" />
+            Gerar Invoice
+          </Button>
           <Button variant="outline" size="sm" onClick={handleDuplicar}>
             <Copy className="h-4 w-4 mr-2" />
             Duplicar
@@ -494,6 +501,10 @@ export default function CotacaoDetalhesPage() {
                   </span>
                 )}
               </TabsTrigger>
+              <TabsTrigger value="invoices">
+                <Receipt className="h-4 w-4 mr-2" />
+                Invoices
+              </TabsTrigger>
             </TabsList>
 
             <TabsContent value="hospedagens" className="mt-4">
@@ -522,6 +533,10 @@ export default function CotacaoDetalhesPage() {
                 items={alimentacoes}
                 onChange={setAlimentacoes}
               />
+            </TabsContent>
+
+            <TabsContent value="invoices" className="mt-4">
+              <InvoiceHistory cotacaoId={params.id as string} />
             </TabsContent>
           </Tabs>
         </div>
@@ -567,6 +582,26 @@ export default function CotacaoDetalhesPage() {
           </Button>
         </div>
       </form>
+      
+      {/* Invoice Generation Dialog */}
+      <GenerateInvoiceDialog
+        open={isInvoiceDialogOpen}
+        onOpenChange={setIsInvoiceDialogOpen}
+        cotacaoId={params.id as string}
+        cotacaoData={{
+          ...cotacao,
+          itens: [
+            ...hospedagens.map(h => ({ ...h, categoria: 'hospedagem' })),
+            ...atividades.map(a => ({ ...a, categoria: 'atividade' })),
+            ...transportes.map(t => ({ ...t, categoria: 'transporte' })),
+            ...alimentacoes.map(a => ({ ...a, categoria: 'alimentacao' })),
+          ],
+        }}
+        onSuccess={(invoiceId) => {
+          window.open(`/dashboard/invoices/${invoiceId}`, '_blank')
+          router.refresh()
+        }}
+      />
     </div>
   )
 }

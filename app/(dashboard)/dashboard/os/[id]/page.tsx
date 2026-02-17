@@ -11,7 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useApi } from '@/hooks/useApi'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
-import { ArrowLeft, Edit, Trash2, Users, MapPin, Calendar, Building2, Plane, Truck, DollarSign, FileText, Compass, Utensils } from 'lucide-react'
+import { ArrowLeft, Edit, Trash2, Users, MapPin, Calendar, Building2, Plane, Truck, DollarSign, FileText, Compass, Utensils, Receipt } from 'lucide-react'
 import { OSInfoSection } from '@/components/os/OSInfoSection'
 import { OSParticipantesSection } from '@/components/os/OSParticipantesSection'
 import { OSGuiasSection } from '@/components/os/OSGuiasSection'
@@ -25,6 +25,8 @@ import { Breadcrumbs } from '@/components/navigation/Breadcrumbs'
 import { AuditoriaButton } from '@/components/os/auditoria-button'
 import { OSExtensionTimeline } from '@/components/os/OSExtensionTimeline'
 import { OSExtensionManager } from '@/components/os/OSExtensionManager'
+import { GenerateInvoiceDialog } from '@/components/invoices/GenerateInvoiceDialog'
+import { InvoiceHistory } from '@/components/invoices/InvoiceHistory'
 
 interface OSDetalhes {
   id: string
@@ -68,6 +70,9 @@ export default function OSDetalhesPage() {
   // Extension Management State
   const [selectedExtensionId, setSelectedExtensionId] = useState<string | null>(null)
   const [isExtensionManagerOpen, setIsExtensionManagerOpen] = useState(false)
+  
+  // Invoice Generation State
+  const [isInvoiceDialogOpen, setIsInvoiceDialogOpen] = useState(false)
 
   // Sincronizar status inicial quando OS carrega
   useState(() => {
@@ -236,6 +241,14 @@ export default function OSDetalhesPage() {
             })
             return null
           })()}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setIsInvoiceDialogOpen(true)}
+          >
+            <Receipt className="h-4 w-4 mr-2" />
+            Gerar Invoice
+          </Button>
           <OSStatusSelect
             key={selectedExtensionId || 'os-main'} // Força remontagem ao trocar contexto
             osId={os.id}
@@ -412,6 +425,10 @@ export default function OSDetalhesPage() {
             <DollarSign className="h-4 w-4 mr-1" />
             Financeiro
           </TabsTrigger>
+          <TabsTrigger value="invoices">
+            <Receipt className="h-4 w-4 mr-1" />
+            Invoices
+          </TabsTrigger>
           <TabsTrigger value="auditoria">
             <FileText className="h-4 w-4 mr-1" />
             Auditoria
@@ -548,6 +565,10 @@ export default function OSDetalhesPage() {
           </Card>
         </TabsContent>
 
+        <TabsContent value="invoices" className="space-y-4">
+          <InvoiceHistory osId={osId} />
+        </TabsContent>
+
         <TabsContent value="auditoria" className="space-y-4">
           <Card>
             <CardHeader>
@@ -573,6 +594,19 @@ export default function OSDetalhesPage() {
           </Card>
         </TabsContent>
       </Tabs>
+      
+      {/* Invoice Generation Dialog */}
+      <GenerateInvoiceDialog
+        open={isInvoiceDialogOpen}
+        onOpenChange={setIsInvoiceDialogOpen}
+        osId={osId}
+        osData={os}
+        onSuccess={(invoiceId) => {
+          window.open(`/dashboard/invoices/${invoiceId}`, '_blank')
+          router.refresh()
+          refetch()
+        }}
+      />
     </div>
   )
 }

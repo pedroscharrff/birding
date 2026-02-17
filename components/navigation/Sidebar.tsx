@@ -18,7 +18,8 @@ import {
   Menu,
   X,
   ChevronLeft,
-  LogOut
+  LogOut,
+  Wallet
 } from 'lucide-react'
 
 interface SidebarProps {
@@ -58,6 +59,11 @@ const menuItems = [
     href: '/dashboard/financeiro',
     label: 'Financeiro',
     icon: DollarSign,
+  },
+  {
+    href: '/dashboard/contas-pagamento',
+    label: 'Contas de Pagamento',
+    icon: Wallet,
   },
   {
     href: '/dashboard/cotacoes',
