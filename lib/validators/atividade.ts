@@ -12,6 +12,7 @@ export const createAtividadeSchema = z.object({
   hora: z.string().optional(),
   fornecedorId: z.string().uuid('ID do fornecedor inválido').optional(),
   notas: z.string().optional(),
+  extensaoId: z.string().uuid().optional().nullable(),
 })
 
 export const updateAtividadeSchema = createAtividadeSchema.partial().omit({ osId: true })

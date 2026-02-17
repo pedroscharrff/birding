@@ -71,6 +71,7 @@ export async function POST(
         ...(validatedData.custoTotal && { custoTotal: validatedData.custoTotal }),
         ...(validatedData.observacoes && { observacoes: validatedData.observacoes }),
         ...(validatedData.reservasRefs && { reservasRefs: validatedData.reservasRefs }),
+        extensaoId: validatedData.extensaoId || null,
       },
       include: {
         fornecedor: {

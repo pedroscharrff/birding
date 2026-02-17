@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import {
   Select,
   SelectContent,
@@ -15,6 +15,7 @@ import type { StatusOS } from '@prisma/client'
 
 interface OSStatusSelectProps {
   osId: string
+  extensaoId?: string | null
   osTitulo?: string
   currentStatus: string
   onStatusChange?: (newStatus: string) => void
@@ -27,16 +28,17 @@ const STATUS_OPTIONS = [
   { value: 'cotacoes', label: 'Cotações', color: 'bg-blue-100 text-blue-700' },
   { value: 'reservas_pendentes', label: 'Reservas Pendentes', color: 'bg-yellow-100 text-yellow-700' },
   { value: 'reservas_confirmadas', label: 'Confirmadas', color: 'bg-green-100 text-green-700' },
-
+  { value: 'documentacao', label: 'Documentação', color: 'bg-indigo-100 text-indigo-700' },
   { value: 'pronto_para_viagem', label: 'Pronto p/ Viagem', color: 'bg-teal-100 text-teal-700' },
   { value: 'em_andamento', label: 'Em Andamento', color: 'bg-purple-100 text-purple-700' },
   { value: 'concluida', label: 'Concluída', color: 'bg-emerald-100 text-emerald-700' },
-
+  { value: 'pos_viagem', label: 'Pós-Viagem', color: 'bg-cyan-100 text-cyan-700' },
   { value: 'cancelada', label: 'Cancelada', color: 'bg-red-100 text-red-700' },
 ]
 
 export function OSStatusSelect({
   osId,
+  extensaoId,
   osTitulo = 'OS',
   currentStatus,
   onStatusChange,
@@ -46,6 +48,27 @@ export function OSStatusSelect({
   const [localStatus, setLocalStatus] = useState(currentStatus)
   const [pendingStatus, setPendingStatus] = useState<string | null>(null)
   const [showTransitionModal, setShowTransitionModal] = useState(false)
+
+  console.log('🎨 OSStatusSelect RENDERIZADO [VERSÃO FIXED V2]:', {
+    osId,
+    extensaoId,
+    osTitulo,
+    currentStatus,
+    localStatus,
+    contexto: extensaoId ? `EXTENSÃO (${extensaoId})` : 'TOUR PRINCIPAL'
+  })
+
+  // Sincronizar status local quando currentStatus mudar
+  useEffect(() => {
+    console.log('🔄 OSStatusSelect [V2] - currentStatus mudou:', {
+      extensaoId,
+      oldLocalStatus: localStatus,
+      newCurrentStatus: currentStatus,
+      contexto: extensaoId ? 'EXTENSÃO' : 'TOUR PRINCIPAL'
+    })
+    setLocalStatus(currentStatus)
+  }, [currentStatus, extensaoId])
+
   const { update, isUpdating } = useOptimisticUpdate()
 
   const currentOption = STATUS_OPTIONS.find((opt) => opt.value === localStatus)
@@ -53,42 +76,90 @@ export function OSStatusSelect({
   const handleStatusChange = async (newStatus: string) => {
     if (newStatus === localStatus) return
 
-    // Guarda o status pendente e mostra o modal de validação
-    setPendingStatus(newStatus)
-    setShowTransitionModal(true)
+    if (extensaoId) {
+      // Para extensões, atualizar diretamente sem modal de validação
+      await executeStatusChange(newStatus, undefined, extensaoId)
+    } else {
+      // Para a OS principal, mostrar o modal de validação
+      setPendingStatus(newStatus)
+      setShowTransitionModal(true)
+    }
   }
 
-  const handleConfirmChange = async (justificativa?: string) => {
-    if (!pendingStatus) return
-
+  // Executa a mudança de status efetiva (chamada pelo modal ou diretamente para extensões)
+  const executeStatusChange = async (targetStatus: string, justificativa?: string, explicitExtensaoId?: string | null) => {
     const oldStatus = localStatus
-    const newStatus = pendingStatus
+    
+    // Preferência para o ID passado explicitamente, fallback para o prop/estado
+    const targetId = explicitExtensaoId !== undefined ? explicitExtensaoId : extensaoId
+    
+    const endpoint = targetId 
+      ? `/api/os/${osId}/extensoes/${targetId}` 
+      : `/api/os/${osId}`
+
+    // ALERT DE DEBUG - REMOVER DEPOIS
+    // alert(`DEBUG:\nTarget ID: ${targetId}\nEndpoint: ${endpoint}\nOrigem: ${explicitExtensaoId !== undefined ? 'EXPLICITO' : 'IMPLICITO'}`)
+
+    console.log('🔍 OSStatusSelect - Alterando status:', {
+      contexto: targetId ? 'EXTENSÃO' : 'TOUR PRINCIPAL',
+      extensaoId: targetId,
+      endpoint,
+      oldStatus,
+      newStatus: targetStatus,
+      justificativa,
+      origem: explicitExtensaoId !== undefined ? 'EXPLICITO' : 'IMPLICITO'
+    })
+
+    const payload = {
+      status: targetStatus,
+      ...(justificativa && { motivo: justificativa }),
+    }
+
+    console.log('📤 OSStatusSelect - Enviando para API:', {
+      contexto: targetId ? 'EXTENSÃO' : 'TOUR PRINCIPAL',
+      endpoint,
+      payload,
+      extensaoId: targetId,
+      osId
+    })
 
     await update({
-      endpoint: `/api/os/${osId}`,
-      optimisticData: newStatus,
+      endpoint,
+      optimisticData: targetStatus,
       updateFn: (status) => {
+        console.log('✅ Status atualizado com sucesso:', {
+          contexto: targetId ? 'EXTENSÃO' : 'TOUR PRINCIPAL',
+          extensaoId: targetId,
+          newStatus: status
+        })
         setLocalStatus(status)
         if (onStatusChange) {
           onStatusChange(status)
         }
       },
       rollbackFn: () => {
+        console.log('❌ Rollback de status:', {
+          contexto: targetId ? 'EXTENSÃO' : 'TOUR PRINCIPAL',
+          extensaoId: targetId,
+          backTo: oldStatus
+        })
         setLocalStatus(oldStatus)
         if (onStatusChange) {
           onStatusChange(oldStatus)
         }
       },
-      payload: {
-        status: newStatus,
-        ...(justificativa && { motivo: justificativa }),
-      },
+      payload,
       successMessage: 'Status atualizado com sucesso',
       errorMessage: 'Erro ao atualizar status',
     })
 
-    // Limpa e fecha
+    // Limpa
     setPendingStatus(null)
+  }
+
+  const handleConfirmChange = async (justificativa?: string) => {
+    if (!pendingStatus) return
+    await executeStatusChange(pendingStatus, justificativa)
   }
 
   const handleCancelChange = () => {

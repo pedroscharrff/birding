@@ -32,9 +32,10 @@ interface OSTransportesSectionProps {
   osId: string
   transportes: Transporte[]
   onUpdate: () => void
+  extensaoId?: string | null
 }
 
-export function OSTransportesSection({ osId, transportes, onUpdate }: OSTransportesSectionProps) {
+export function OSTransportesSection({ osId, transportes, onUpdate, extensaoId }: OSTransportesSectionProps) {
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [loading, setLoading] = useState(false)
   const [editingTransporte, setEditingTransporte] = useState<Transporte | null>(null)
@@ -61,6 +62,7 @@ export function OSTransportesSection({ osId, transportes, onUpdate }: OSTranspor
     { value: 'executivo_fora_cidade', label: 'Executivo Fora da Cidade' },
     { value: 'aereo_cliente', label: 'Aéreo Cliente' },
     { value: 'aereo_guia', label: 'Aéreo Guia' },
+    { value: 'suv', label: 'SUV' },
   ]
 
   const tipoLabels: Record<string, string> = {
@@ -70,6 +72,7 @@ export function OSTransportesSection({ osId, transportes, onUpdate }: OSTranspor
     executivo_fora_cidade: 'Executivo Fora da Cidade',
     aereo_cliente: 'Aéreo Cliente',
     aereo_guia: 'Aéreo Guia',
+    suv: 'SUV',
   }
 
   const resetForm = () => {
@@ -102,6 +105,7 @@ export function OSTransportesSection({ osId, transportes, onUpdate }: OSTranspor
         ...formData,
         custo: formData.custo ? parseFloat(formData.custo) : undefined,
         fornecedorId: formData.fornecedorId || undefined,
+        extensaoId: extensaoId || null,
       }
 
       const url = editingTransporte

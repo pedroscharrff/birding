@@ -33,9 +33,10 @@ interface OSAtividadesSectionProps {
   osId: string
   atividades: Atividade[]
   onUpdate: () => void
+  extensaoId?: string | null
 }
 
-export function OSAtividadesSection({ osId, atividades, onUpdate }: OSAtividadesSectionProps) {
+export function OSAtividadesSection({ osId, atividades, onUpdate, extensaoId }: OSAtividadesSectionProps) {
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [loading, setLoading] = useState(false)
   const [editingAtividade, setEditingAtividade] = useState<Atividade | null>(null)
@@ -77,6 +78,7 @@ export function OSAtividadesSection({ osId, atividades, onUpdate }: OSAtividades
         ...formData,
         valor: formData.valor ? parseFloat(formData.valor) : undefined,
         quantidadeMaxima: formData.quantidadeMaxima ? parseInt(formData.quantidadeMaxima) : undefined,
+        extensaoId: extensaoId || null,
       }
 
       const url = editingAtividade

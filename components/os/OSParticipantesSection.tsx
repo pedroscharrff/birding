@@ -26,11 +26,12 @@ interface Participante {
 
 interface OSParticipantesSectionProps {
   osId: string
+  extensaoId?: string | null
   participantes: Participante[]
   onUpdate: () => void
 }
 
-export function OSParticipantesSection({ osId, participantes, onUpdate }: OSParticipantesSectionProps) {
+export function OSParticipantesSection({ osId, extensaoId, participantes, onUpdate }: OSParticipantesSectionProps) {
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [loading, setLoading] = useState(false)
   const [editingParticipante, setEditingParticipante] = useState<Participante | null>(null)
@@ -61,6 +62,7 @@ export function OSParticipantesSection({ osId, participantes, onUpdate }: OSPart
     const payload = {
       ...normalized,
       idade: normalized.idade ? parseInt(normalized.idade) : undefined,
+      extensaoId: extensaoId || undefined,
     }
 
     // Cria um participante otimista temporário

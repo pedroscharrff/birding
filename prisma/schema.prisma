@@ -41,6 +41,7 @@ enum TipoTransporte {
   executivo_fora_cidade
   aereo_cliente
   aereo_guia
+  suv
 }
 
 enum TipoLancamento {
@@ -161,6 +162,7 @@ enum EntidadeAuditoria {
   lancamento_financeiro
   pagamento_os
   anotacao
+  extensao
 }
 
 // ============================================
@@ -329,7 +331,11 @@ model OS {
   arquivos              Json?      // Array de { url, key, fileName, contentType, uploadedAt, categoria }
 
   createdAt             DateTime   @default(now()) @map("created_at")
-  updatedAt             DateTime   @updatedAt @map("updated_at")
+  updatedAt             DateTime   @default(now()) @updatedAt @map("updated_at")
+
+  // Soft Delete
+  deletedAt             DateTime?  @map("deleted_at")
+  deletedBy             String?    @map("deleted_by")
 
   // Relations
   organizacao            Organizacao            @relation(fields: [orgId], references: [id], onDelete: Cascade)
@@ -350,6 +356,7 @@ model OS {
   eventosCalendario      EventoCalendario[]
   auditorias             AuditoriaOS[]
   policySnapshots        OSPolicySnapshot[]
+  extensoes              OSExtensao[]
 
   @@index([orgId])
   @@index([status])
@@ -357,7 +364,50 @@ model OS {
   @@index([dataFim])
   @@index([destino])
   @@index([agenteResponsavelId])
+  @@index([deletedAt])
   @@map("os")
+}
+
+model OSExtensao {
+  id          String   @id @default(uuid())
+  osId        String   @map("os_id")
+  nome        String
+  dataInicio  DateTime @map("data_inicio") @db.Date
+  dataFim     DateTime @map("data_fim") @db.Date
+  descricao   String?  @db.Text
+  ordem       Int      @default(0)
+  status      StatusOS @default(planejamento)
+  
+  // Campos Financeiros (para controle separado por extensão)
+  valorVenda      Decimal? @map("valor_venda") @db.Decimal(12, 2)
+  moedaVenda      Moeda    @default(BRL) @map("moeda_venda")
+  valorRecebido   Decimal? @map("valor_recebido") @db.Decimal(12, 2) @default(0)
+  custoEstimado   Decimal? @map("custo_estimado") @db.Decimal(12, 2)
+  custoReal       Decimal? @map("custo_real") @db.Decimal(12, 2)
+  margemEstimada  Decimal? @map("margem_estimada") @db.Decimal(5, 2)
+  obsFinanceiras  String?  @map("obs_financeiras") @db.Text
+  
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  os              OS                   @relation(fields: [osId], references: [id], onDelete: Cascade)
+  atividades      Atividade[]
+  hospedagens     Hospedagem[]
+  transportes     Transporte[]
+  passagensAereas PassagemAerea[]
+  guias           GuiaDesignacao[]
+  motoristas      MotoristaDesignacao[]
+  fornecedores    OSFornecedor[]
+  lancamentosFinanceiros LancamentoFinanceiro[]
+  pagamentos             PagamentoOS[]
+  auditorias             AuditoriaOS[]
+  historicoStatus        HistoricoStatus[]
+
+  @@index([osId])
+  @@index([dataInicio])
+  participantes Participante[]
+  @@map("os_extensoes")
 }
 
 model Participante {
@@ -382,6 +432,7 @@ model Participante {
 
   // Relations
   os OS @relation(fields: [osId], references: [id], onDelete: Cascade)
+  extensoes OSExtensao[]
 
   @@index([osId])
   @@index([email])
@@ -398,14 +449,17 @@ model OSFornecedor {
   contatoEmail    String?                @map("contato_email")
   contatoTelefone String?                @map("contato_telefone")
   contratoRef     String?                @map("contrato_ref")
+  extensaoId      String?                @map("extensao_id")
   createdAt       DateTime               @default(now()) @map("created_at")
   updatedAt       DateTime               @updatedAt @map("updated_at")
 
   // Relations
-  os         OS         @relation(fields: [osId], references: [id], onDelete: Cascade)
-  fornecedor Fornecedor @relation(fields: [fornecedorId], references: [id])
+  os         OS          @relation(fields: [osId], references: [id], onDelete: Cascade)
+  extensao   OSExtensao? @relation(fields: [extensaoId], references: [id])
+  fornecedor Fornecedor  @relation(fields: [fornecedorId], references: [id])
 
   @@index([osId])
+  @@index([extensaoId])
   @@index([fornecedorId])
   @@index([categoria])
   @@map("os_fornecedores")
@@ -430,6 +484,7 @@ model Atividade {
   dataPagamento       DateTime?       @map("data_pagamento") @db.Date
   formaPagamento      String?         @map("forma_pagamento")
   referenciaPagamento String?         @map("referencia_pagamento")
+  extensaoId          String?         @map("extensao_id")
 
   // Arquivos (vouchers, confirmações)
   arquivos          Json?       // Array de { url, key, fileName, contentType, uploadedAt }
@@ -439,6 +494,7 @@ model Atividade {
 
   // Relations
   os         OS          @relation(fields: [osId], references: [id], onDelete: Cascade)
+  extensao   OSExtensao? @relation(fields: [extensaoId], references: [id])
   fornecedor Fornecedor? @relation(fields: [fornecedorId], references: [id])
 
   @@index([osId])
@@ -472,6 +528,7 @@ model Hospedagem {
   dataPagamento       DateTime?       @map("data_pagamento") @db.Date
   formaPagamento      String?         @map("forma_pagamento")
   referenciaPagamento String?         @map("referencia_pagamento")
+  extensaoId          String?         @map("extensao_id")
 
   // Arquivos (vouchers, confirmações)
   arquivos      Json?              // Array de { url, key, fileName, contentType, uploadedAt }
@@ -481,6 +538,7 @@ model Hospedagem {
 
   // Relations
   os         OS                 @relation(fields: [osId], references: [id], onDelete: Cascade)
+  extensao   OSExtensao?        @relation(fields: [extensaoId], references: [id])
   fornecedor Fornecedor         @relation(fields: [fornecedorId], references: [id])
   tarifa     FornecedorTarifa?  @relation(fields: [tarifaId], references: [id])
 
@@ -505,6 +563,7 @@ model Transporte {
   dataChegada  DateTime?       @map("data_chegada")
   custo        Decimal?        @db.Decimal(12, 2)
   moeda        Moeda           @default(BRL)
+  extensaoId   String?         @map("extensao_id")
   detalhes     Json?
 
   // Controle de Pagamento
@@ -521,6 +580,7 @@ model Transporte {
 
   // Relations
   os         OS          @relation(fields: [osId], references: [id], onDelete: Cascade)
+  extensao   OSExtensao? @relation(fields: [extensaoId], references: [id])
   fornecedor Fornecedor? @relation(fields: [fornecedorId], references: [id])
 
   @@index([osId])
@@ -544,6 +604,7 @@ model PassagemAerea {
   dataChegada  DateTime?               @map("data_chegada")
   custo        Decimal?                @db.Decimal(12, 2)
   moeda        Moeda                   @default(BRL)
+  extensaoId   String?                 @map("extensao_id")
 
   // Controle de Pagamento
   statusPagamento     StatusPagamento @default(pendente) @map("status_pagamento")
@@ -558,7 +619,8 @@ model PassagemAerea {
   updatedAt    DateTime                @updatedAt @map("updated_at")
 
   // Relations
-  os OS @relation(fields: [osId], references: [id], onDelete: Cascade)
+  os       OS          @relation(fields: [osId], references: [id], onDelete: Cascade)
+  extensao OSExtensao? @relation(fields: [extensaoId], references: [id])
 
   @@index([osId])
   @@index([categoria])
@@ -570,16 +632,18 @@ model PassagemAerea {
 model GuiaDesignacao {
   id        String   @id @default(uuid())
   osId      String   @map("os_id")
+  extensaoId String? @map("extensao_id")
   guiaId    String   @map("guia_id")
   funcao    String?
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
   // Relations
-  os   OS      @relation(fields: [osId], references: [id], onDelete: Cascade)
-  guia Usuario @relation(fields: [guiaId], references: [id])
+  os   OS          @relation(fields: [osId], references: [id], onDelete: Cascade)
+  extensao OSExtensao? @relation(fields: [extensaoId], references: [id])
+  guia Usuario     @relation(fields: [guiaId], references: [id])
 
-  @@unique([osId, guiaId])
+  @@unique([osId, guiaId, extensaoId])
   @@map("os_guias_designacao")
 }
 
@@ -587,15 +651,17 @@ model MotoristaDesignacao {
   id           String          @id @default(uuid())
   osId         String          @map("os_id")
   motoristaId  String          @map("motorista_id")
+  extensaoId   String?         @map("extensao_id")
   veiculoTipo  TipoTransporte? @map("veiculo_tipo")
   createdAt    DateTime        @default(now()) @map("created_at")
   updatedAt    DateTime        @updatedAt @map("updated_at")
 
   // Relations
-  os        OS      @relation(fields: [osId], references: [id], onDelete: Cascade)
-  motorista Usuario @relation(fields: [motoristaId], references: [id])
+  os        OS          @relation(fields: [osId], references: [id], onDelete: Cascade)
+  extensao  OSExtensao? @relation(fields: [extensaoId], references: [id])
+  motorista Usuario     @relation(fields: [motoristaId], references: [id])
 
-  @@unique([osId, motoristaId])
+  @@unique([osId, motoristaId, extensaoId])
   @@map("os_motoristas_designacao")
 }
 
@@ -640,12 +706,15 @@ model LancamentoFinanceiro {
   // Relations
   organizacao       Organizacao @relation(fields: [orgId], references: [id], onDelete: Cascade)
   os                OS?         @relation(fields: [osId], references: [id])
+  extensaoId        String?     @map("extensao_id")
+  extensao          OSExtensao? @relation(fields: [extensaoId], references: [id])
   referenciaUsuario Usuario?    @relation("LancamentoReferenciaUsuario", fields: [referenciaUsuarioId], references: [id])
   fornecedor        Fornecedor? @relation(fields: [fornecedorId], references: [id])
   criador           Usuario     @relation("LancamentoCriadoPor", fields: [createdBy], references: [id])
 
   @@index([orgId])
   @@index([osId])
+  @@index([extensaoId])
   @@index([categoria])
   @@index([data])
   @@map("financeiro_lancamentos")
@@ -695,10 +764,13 @@ model PagamentoOS {
   // Relations
   organizacao Organizacao @relation(fields: [orgId], references: [id], onDelete: Cascade)
   os          OS          @relation(fields: [osId], references: [id], onDelete: Cascade)
+  extensaoId  String?     @map("extensao_id")
+  extensao    OSExtensao? @relation(fields: [extensaoId], references: [id])
   fornecedor  Fornecedor? @relation(fields: [fornecedorId], references: [id])
 
   @@index([orgId])
   @@index([osId])
+  @@index([extensaoId])
   @@index([tipo])
   @@index([status])
   @@index([dataVencimento])
@@ -737,9 +809,12 @@ model HistoricoStatus {
 
   // Relations
   os      OS      @relation(fields: [osId], references: [id], onDelete: Cascade)
+  extensaoId String? @map("extensao_id")
+  extensao OSExtensao? @relation(fields: [extensaoId], references: [id])
   usuario Usuario @relation(fields: [alteradoPor], references: [id])
 
   @@index([osId])
+  @@index([extensaoId])
   @@index([createdAt])
   @@map("os_historico_status")
 }
@@ -908,10 +983,13 @@ model AuditoriaOS {
   // Relations
   organizacao  Organizacao       @relation(fields: [orgId], references: [id], onDelete: Cascade)
   os           OS                @relation(fields: [osId], references: [id], onDelete: Cascade)
+  extensaoId   String?           @map("extensao_id")
+  extensao     OSExtensao?       @relation(fields: [extensaoId], references: [id])
   usuario      Usuario           @relation(fields: [usuarioId], references: [id])
 
   @@index([orgId])
   @@index([osId])
+  @@index([extensaoId])
   @@index([usuarioId])
   @@index([acao])
   @@index([entidade])

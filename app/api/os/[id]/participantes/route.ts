@@ -13,10 +13,11 @@ export async function POST(
     const session = await requireAuth()
     const { id: osId } = params
     const body = await request.json()
+    const { extensaoId, ...participanteData } = body
     
     // Validar entrada
     const validatedData = createParticipanteSchema.parse({
-      ...body,
+      ...participanteData,
       osId,
     })
 
@@ -44,9 +45,19 @@ export async function POST(
       )
     }
     
-    // Criar participante
+    // Criar participante e vincular à extensão se fornecida
     const participante = await prisma.participante.create({
-      data: dataToCreate,
+      data: {
+        ...dataToCreate,
+        extensoes: extensaoId ? {
+          connect: { id: extensaoId }
+        } : undefined
+      },
+      include: {
+        extensoes: {
+          select: { id: true }
+        }
+      }
     })
 
     // Registrar auditoria

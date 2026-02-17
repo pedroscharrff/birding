@@ -9,37 +9,41 @@ import { Decimal } from '@prisma/client/runtime/library'
 /**
  * Calcula o custo total detalhado de uma OS
  */
-export async function calcularCustosOS(osId: string): Promise<CustosDetalhados> {
+export async function calcularCustosOS(osId: string, extensaoId?: string | null): Promise<CustosDetalhados> {
+  const where: any = { osId }
+  
+  if (extensaoId !== undefined) {
+    where.extensaoId = extensaoId
+  }
+
   // Custos de hospedagem
   const hospedagens = await prisma.hospedagem.aggregate({
-    where: { osId },
+    where,
     _sum: { custoTotal: true }
   })
 
   // Custos de transporte
   const transportes = await prisma.transporte.aggregate({
-    where: { osId },
+    where,
     _sum: { custo: true }
   })
 
   // Custos de atividades
   const atividades = await prisma.atividade.aggregate({
-    where: { osId },
+    where,
     _sum: { valor: true }
   })
 
   // Custos de passagens aéreas
   const passagens = await prisma.passagemAerea.aggregate({
-    where: { osId },
+    where,
     _sum: { custo: true }
   })
 
   // Outros custos (lançamentos financeiros de saída)
+  const lancamentosWhere = { ...where, tipo: { in: ['saida', 'adiantamento'] } }
   const lancamentos = await prisma.lancamentoFinanceiro.aggregate({
-    where: {
-      osId,
-      tipo: { in: ['saida', 'adiantamento'] }
-    },
+    where: lancamentosWhere,
     _sum: { valor: true }
   })
 
@@ -70,7 +74,26 @@ export async function calcularCustosOS(osId: string): Promise<CustosDetalhados> 
 /**
  * Calcula a margem de lucro de uma OS
  */
-export async function calcularMargemOS(osId: string) {
+export async function calcularMargemOS(osId: string, extensaoId?: string | null) {
+  if (extensaoId !== undefined) {
+    // Se filtrando por extensão, não temos dados de receita/venda específicos da extensão no schema atual
+    // Então retornamos apenas os custos reais filtrados pela extensão
+    const custos = await calcularCustosOS(osId, extensaoId)
+    
+    return {
+      receita: 0,
+      recebido: 0,
+      saldoReceber: 0,
+      custoEstimado: 0,
+      custoReal: custos.total,
+      lucroEstimado: -custos.total, // Prejuízo técnico pois receita = 0
+      lucroReal: -custos.total,
+      margemEstimadaPercent: 0,
+      margemRealPercent: 0,
+      custosDetalhados: custos
+    }
+  }
+
   const os = await prisma.oS.findUnique({
     where: { id: osId },
     select: {
@@ -114,12 +137,17 @@ export async function calcularMargemOS(osId: string) {
 /**
  * Obtém resumo financeiro completo de uma OS
  */
-export async function obterResumoFinanceiroOS(osId: string): Promise<OSFinanceiroResumo> {
-  const margem = await calcularMargemOS(osId)
+export async function obterResumoFinanceiroOS(osId: string, extensaoId?: string | null): Promise<OSFinanceiroResumo> {
+  const margem = await calcularMargemOS(osId, extensaoId)
+
+  const wherePagamento: any = { osId, tipo: 'entrada' }
+  if (extensaoId !== undefined) {
+    wherePagamento.extensaoId = extensaoId
+  }
 
   // Verificar status de pagamento
   const pagamentos = await prisma.pagamentoOS.findMany({
-    where: { osId, tipo: 'entrada' }
+    where: wherePagamento
   })
 
   let statusPagamento: 'pago' | 'parcial' | 'pendente' | 'atrasado' = 'pendente'
@@ -155,9 +183,14 @@ export async function obterResumoFinanceiroOS(osId: string): Promise<OSFinanceir
 /**
  * Obtém resumo de todos os pagamentos (entradas e saídas) de uma OS
  */
-export async function obterPagamentosOS(osId: string): Promise<PagamentosResumo> {
+export async function obterPagamentosOS(osId: string, extensaoId?: string | null): Promise<PagamentosResumo> {
+  const where: any = { osId }
+  if (extensaoId !== undefined) {
+    where.extensaoId = extensaoId
+  }
+
   const pagamentos = await prisma.pagamentoOS.findMany({
-    where: { osId },
+    where,
     include: {
       fornecedor: {
         select: {

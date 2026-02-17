@@ -101,6 +101,7 @@ export async function logAuditoria(params: LogAuditoriaParams): Promise<Auditori
       orgId: usuario.orgId,
       osId: params.osId,
       usuarioId: params.usuarioId,
+      extensaoId: params.extensaoId || null,
       usuarioNome: usuario.nome,
       usuarioRole: usuario.roleGlobal,
       acao: params.acao as any,
@@ -242,6 +243,7 @@ async function buscarAuditoriasDB(
   if (acao) where.acao = acao
   if (entidade) where.entidade = entidade
   if (entidadeId) where.entidadeId = entidadeId
+  if (filters.extensaoId !== undefined) where.extensaoId = filters.extensaoId
 
   if (dataInicio || dataFim) {
     where.createdAt = {}

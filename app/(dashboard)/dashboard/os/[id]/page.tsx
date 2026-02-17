@@ -23,6 +23,8 @@ import { OSStatusSelect } from '@/components/os/OSStatusSelect'
 import { OSStatusHistory } from '@/components/os/OSStatusHistory'
 import { Breadcrumbs } from '@/components/navigation/Breadcrumbs'
 import { AuditoriaButton } from '@/components/os/auditoria-button'
+import { OSExtensionTimeline } from '@/components/os/OSExtensionTimeline'
+import { OSExtensionManager } from '@/components/os/OSExtensionManager'
 
 interface OSDetalhes {
   id: string
@@ -48,6 +50,7 @@ interface OSDetalhes {
   fornecedores: any[]
   anotacoes: any[]
   historicoStatus: any[]
+  extensoes: any[]
 }
 
 export default function OSDetalhesPage() {
@@ -61,6 +64,94 @@ export default function OSDetalhesPage() {
 
   const [activeTab, setActiveTab] = useState('geral')
   const [currentStatus, setCurrentStatus] = useState(os?.status || '')
+  
+  // Extension Management State
+  const [selectedExtensionId, setSelectedExtensionId] = useState<string | null>(null)
+  const [isExtensionManagerOpen, setIsExtensionManagerOpen] = useState(false)
+
+  // Sincronizar status inicial quando OS carrega
+  useState(() => {
+    if (os?.status) setCurrentStatus(os.status)
+  })
+  
+  // Atualizar quando os mudar
+  if (os?.status && currentStatus === '' && !loading) {
+     setCurrentStatus(os.status)
+  }
+  const [extensionToEdit, setExtensionToEdit] = useState<any | null>(null)
+  
+  const currentExtension = selectedExtensionId 
+    ? os?.extensoes?.find((e: any) => e.id === selectedExtensionId)
+    : null;
+
+  const handleOpenAddExtension = () => {
+    setExtensionToEdit(null)
+    setIsExtensionManagerOpen(true)
+  }
+
+  const handleOpenEditExtension = (ext: any) => {
+    setExtensionToEdit(ext)
+    setIsExtensionManagerOpen(true)
+  }
+
+  // Filter helper
+  const filterByExtension = (items: any[]) => {
+    if (!items) return []
+    if (selectedExtensionId) {
+      // Quando uma extensão está selecionada, mostrar APENAS os itens dessa extensão
+      return items.filter((item: any) => item.extensaoId === selectedExtensionId)
+    }
+    // Quando "Visão Geral" está selecionada, mostrar APENAS itens do tour principal (sem extensão)
+    return items.filter((item: any) => !item.extensaoId || item.extensaoId === null)
+  }
+
+  // Filter específico para histórico de status
+  // O histórico usa extensaoId diretamente (não extensaoId como outros itens)
+  const filterHistoricoByExtension = (historico: any[]) => {
+    if (!historico) return []
+    
+    console.log('📋 Filtrando histórico:', {
+      total: historico.length,
+      selectedExtensionId,
+      items: historico.map(h => ({
+        id: h.id,
+        extensaoId: h.extensaoId,
+        de: h.de,
+        para: h.para,
+        extensaoNome: h.extensao?.nome
+      }))
+    })
+    
+    if (selectedExtensionId) {
+      // Quando uma extensão está selecionada, mostrar APENAS histórico dessa extensão
+      const filtered = historico.filter((item: any) => item.extensaoId === selectedExtensionId)
+      console.log('📋 Histórico filtrado para extensão:', filtered.length)
+      return filtered
+    }
+    
+    // Quando "Visão Geral" está selecionada, mostrar APENAS histórico do tour principal
+    const filtered = historico.filter((item: any) => !item.extensaoId || item.extensaoId === null)
+    console.log('📋 Histórico filtrado para tour principal:', filtered.length)
+    return filtered
+  }
+
+  const filteredParticipantes = selectedExtensionId 
+    ? (os?.participantes || []).filter((p: any) => p.extensoes?.some((e: any) => e.id === selectedExtensionId))
+    : (os?.participantes || [])
+
+  const filteredGuias = filterByExtension(os?.guiasDesignacao || [])
+  const filteredHospedagens = filterByExtension(os?.hospedagens || [])
+  const filteredTransportes = filterByExtension(os?.transportes || [])
+  const filteredAtividades = filterByExtension(os?.atividades || [])
+  const filteredPassagens = filterByExtension(os?.passagensAereas || [])
+
+  const handleStatusChange = (newStatus: string) => {
+    if (!selectedExtensionId) {
+      setCurrentStatus(newStatus)
+    }
+    // Atualizar dados após mudança
+    refetch()
+  }
 
   if (loading) {
     return <OSDetailsSkeleton />
@@ -105,32 +196,57 @@ export default function OSDetalhesPage() {
             </Button>
           </Link>
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">{os.titulo}</h1>
+            <h1 className="text-3xl font-bold text-gray-900">
+              {selectedExtensionId ? currentExtension?.nome : os.titulo}
+            </h1>
             <div className="flex items-center gap-4 mt-2 text-gray-600">
-              <div className="flex items-center gap-1">
-                <MapPin className="h-4 w-4" />
-                <span>{os.destino}</span>
-              </div>
+              {!selectedExtensionId && (
+                <div className="flex items-center gap-1">
+                  <MapPin className="h-4 w-4" />
+                  <span>{os.destino}</span>
+                </div>
+              )}
               <div className="flex items-center gap-1">
                 <Calendar className="h-4 w-4" />
                 <span>
-                  {format(new Date(os.dataInicio), 'dd MMM', { locale: ptBR })} a{' '}
-                  {format(new Date(os.dataFim), 'dd MMM yyyy', { locale: ptBR })}
+                  {selectedExtensionId && currentExtension 
+                    ? `${format(new Date(currentExtension.dataInicio), 'dd MMM', { locale: ptBR })} a ${format(new Date(currentExtension.dataFim), 'dd MMM yyyy', { locale: ptBR })}`
+                    : `${format(new Date(os.dataInicio), 'dd MMM', { locale: ptBR })} a ${format(new Date(os.dataFim), 'dd MMM yyyy', { locale: ptBR })}`
+                  }
                 </span>
               </div>
+              {selectedExtensionId && (
+                <div className="flex items-center gap-1 text-sm bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full">
+                  <span>Extensão do Tour</span>
+                </div>
+              )}
             </div>
           </div>
         </div>
         <div className="flex items-center gap-2">
+          {(() => {
+            console.log('🎯 Renderizando OSStatusSelect:', {
+              selectedExtensionId,
+              extensaoNome: selectedExtensionId 
+                ? os.extensoes?.find((e: any) => e.id === selectedExtensionId)?.nome 
+                : 'Tour Principal',
+              status: selectedExtensionId 
+                ? os.extensoes?.find((e: any) => e.id === selectedExtensionId)?.status 
+                : os.status
+            })
+            return null
+          })()}
           <OSStatusSelect
+            key={selectedExtensionId || 'os-main'} // Força remontagem ao trocar contexto
             osId={os.id}
-            osTitulo={os.titulo}
-            currentStatus={currentStatus || os.status}
-            onStatusChange={(newStatus) => {
-              setCurrentStatus(newStatus)
-              // Atualizar apenas o histórico, sem refetch completo
-              refetch()
-            }}
+            extensaoId={selectedExtensionId}
+            osTitulo={selectedExtensionId 
+              ? (os.extensoes?.find((e: any) => e.id === selectedExtensionId)?.nome || 'Extensão')
+              : os.titulo}
+            currentStatus={selectedExtensionId 
+              ? (os.extensoes?.find((e: any) => e.id === selectedExtensionId)?.status || 'planejamento')
+              : (currentStatus || os.status)}
+            onStatusChange={handleStatusChange}
             variant="badge"
             size="md"
           />
@@ -148,7 +264,10 @@ export default function OSDetalhesPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{os.participantes.length}</div>
+            <div className="text-2xl font-bold">{filteredParticipantes.length}</div>
+            {selectedExtensionId && (
+              <p className="text-xs text-gray-500 mt-1">desta extensão</p>
+            )}
           </CardContent>
         </Card>
         <Card>
@@ -159,7 +278,10 @@ export default function OSDetalhesPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{os.guiasDesignacao.length}</div>
+            <div className="text-2xl font-bold">{filteredGuias.length}</div>
+            {selectedExtensionId && (
+              <p className="text-xs text-gray-500 mt-1">desta extensão</p>
+            )}
           </CardContent>
         </Card>
         <Card>
@@ -170,7 +292,10 @@ export default function OSDetalhesPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{os.hospedagens.length}</div>
+            <div className="text-2xl font-bold">{filteredHospedagens.length}</div>
+            {selectedExtensionId && (
+              <p className="text-xs text-gray-500 mt-1">desta extensão</p>
+            )}
           </CardContent>
         </Card>
         <Card>
@@ -181,7 +306,10 @@ export default function OSDetalhesPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{os.transportes.length}</div>
+            <div className="text-2xl font-bold">{filteredTransportes.length}</div>
+            {selectedExtensionId && (
+              <p className="text-xs text-gray-500 mt-1">desta extensão</p>
+            )}
           </CardContent>
         </Card>
         <Card>
@@ -193,8 +321,11 @@ export default function OSDetalhesPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {os.atividades.filter((a: any) => a.tipo === 'atividade' || !a.tipo).length}
+              {filteredAtividades.filter((a: any) => a.tipo === 'atividade' || !a.tipo).length}
             </div>
+            {selectedExtensionId && (
+              <p className="text-xs text-gray-500 mt-1">desta extensão</p>
+            )}
           </CardContent>
         </Card>
         <Card>
@@ -206,8 +337,11 @@ export default function OSDetalhesPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {os.atividades.filter((a: any) => a.tipo === 'alimentacao').length}
+              {filteredAtividades.filter((a: any) => a.tipo === 'alimentacao').length}
             </div>
+            {selectedExtensionId && (
+              <p className="text-xs text-gray-500 mt-1">desta extensão</p>
+            )}
           </CardContent>
         </Card>
         <Card>
@@ -218,30 +352,58 @@ export default function OSDetalhesPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{os.passagensAereas.length}</div>
+            <div className="text-2xl font-bold">{filteredPassagens.length}</div>
+            {selectedExtensionId && (
+              <p className="text-xs text-gray-500 mt-1">desta extensão</p>
+            )}
           </CardContent>
         </Card>
       </div>
+      
+      {/* Extensions Navigation */}
+      <div className="space-y-4">
+        <div className="flex justify-between items-center">
+            <h2 className="text-xl font-semibold">Itinerário & Extensões</h2>
+        </div>
+        <OSExtensionTimeline
+            extensoes={os.extensoes || []}
+            selectedExtensionId={selectedExtensionId}
+            onSelect={(id) => {
+              console.log('🔄 Selecionando extensão:', id)
+              setSelectedExtensionId(id)
+            }}
+            onAddExtension={handleOpenAddExtension}
+            onEditExtension={handleOpenEditExtension}
+        />
 
-      {/* Tabs */}
+        <OSExtensionManager 
+            osId={osId}
+            open={isExtensionManagerOpen}
+            onOpenChange={setIsExtensionManagerOpen}
+            onSuccess={refetch}
+            editingExtension={extensionToEdit} 
+        />
+      </div>
+
+      {/* Main Tabs - Contextualized by Selected Extension */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
         <TabsList>
           <TabsTrigger value="geral">Informações Gerais</TabsTrigger>
           <TabsTrigger value="participantes">
-            Participantes ({os.participantes.length})
+            Participantes ({filteredParticipantes.length})
           </TabsTrigger>
           <TabsTrigger value="guias">
             <Compass className="h-4 w-4 mr-1" />
-            Guias ({os.guiasDesignacao.length})
+            Guias ({filteredGuias.length})
           </TabsTrigger>
           <TabsTrigger value="hospedagens">
-            Hospedagens ({os.hospedagens.length})
+            Hospedagens ({filteredHospedagens.length})
           </TabsTrigger>
           <TabsTrigger value="transportes">
-            Transportes ({os.transportes.length})
+            Transportes ({filteredTransportes.length})
           </TabsTrigger>
           <TabsTrigger value="atividades">
-            Atividades ({os.atividades.length})
+            Atividades ({filteredAtividades.length})
           </TabsTrigger>
           <TabsTrigger value="alimentacao">
             Alimentação
@@ -257,34 +419,108 @@ export default function OSDetalhesPage() {
         </TabsList>
 
         <TabsContent value="geral" className="space-y-4">
-          <OSInfoSection os={os} />
-          {os.historicoStatus && os.historicoStatus.length > 0 && (
-            <OSStatusHistory historico={os.historicoStatus} />
+          {selectedExtensionId && currentExtension ? (
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle>Detalhes da Extensão</CardTitle>
+                    <CardDescription>Informações deste trecho da viagem</CardDescription>
+                  </div>
+                  <Button variant="outline" size="sm" onClick={() => handleOpenEditExtension(currentExtension)}>
+                    <Edit className="h-4 w-4 mr-2" />
+                    Editar Detalhes
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="grid md:grid-cols-2 gap-6">
+                  <div>
+                    <span className="text-sm font-medium text-gray-500">Nome</span>
+                    <p className="text-lg font-medium">{currentExtension.nome}</p>
+                  </div>
+                  <div>
+                    <span className="text-sm font-medium text-gray-500">Status</span>
+                    <p className="text-lg font-medium capitalize">{currentExtension.status?.replace(/_/g, ' ') || '-'}</p>
+                  </div>
+                  <div>
+                    <span className="text-sm font-medium text-gray-500">Data Início</span>
+                    <p className="text-lg font-medium">{format(new Date(currentExtension.dataInicio), "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}</p>
+                  </div>
+                  <div>
+                    <span className="text-sm font-medium text-gray-500">Data Fim</span>
+                    <p className="text-lg font-medium">{format(new Date(currentExtension.dataFim), "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}</p>
+                  </div>
+                </div>
+                {currentExtension.descricao && (
+                  <div>
+                    <span className="text-sm font-medium text-gray-500">Descrição</span>
+                    <p className="text-gray-900 mt-1 whitespace-pre-wrap">{currentExtension.descricao}</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          ) : (
+            <OSInfoSection os={os} onUpdate={refetch} />
+          )}
+          {filterHistoricoByExtension(os.historicoStatus || []).length > 0 && (
+            <OSStatusHistory historico={filterHistoricoByExtension(os.historicoStatus || [])} />
           )}
         </TabsContent>
 
         <TabsContent value="participantes" className="space-y-4">
-          <OSParticipantesSection osId={osId} participantes={os.participantes} onUpdate={() => {}} />
+          <OSParticipantesSection 
+            osId={osId} 
+            participantes={filteredParticipantes} 
+            onUpdate={() => {}} 
+            extensaoId={selectedExtensionId}
+          />
         </TabsContent>
 
         <TabsContent value="guias" className="space-y-4">
-          <OSGuiasSection osId={osId} guias={os.guiasDesignacao} onUpdate={refetch} />
+          {/* Note: We need to update OSGuiasSection to handle extensionId assignment */}
+          <OSGuiasSection 
+            osId={osId} 
+            guias={filteredGuias} 
+            onUpdate={refetch} 
+            extensaoId={selectedExtensionId} 
+          />
         </TabsContent>
 
         <TabsContent value="hospedagens" className="space-y-4">
-          <OSHospedagensSection osId={osId} hospedagens={os.hospedagens} onUpdate={() => {}} />
+          <OSHospedagensSection 
+            osId={osId} 
+            hospedagens={filteredHospedagens} 
+            onUpdate={refetch} 
+            extensaoId={selectedExtensionId} 
+          />
         </TabsContent>
 
         <TabsContent value="transportes" className="space-y-4">
-          <OSTransportesSection osId={osId} transportes={os.transportes} onUpdate={() => {}} />
+          <OSTransportesSection 
+            osId={osId} 
+            transportes={filteredTransportes} 
+            onUpdate={refetch} 
+            extensaoId={selectedExtensionId} 
+          />
         </TabsContent>
 
         <TabsContent value="atividades" className="space-y-4">
-          <OSAtividadesSection osId={osId} atividades={os.atividades.filter((a: any) => a.tipo === 'atividade' || !a.tipo)} onUpdate={refetch} />
+          <OSAtividadesSection 
+            osId={osId} 
+            atividades={filteredAtividades.filter((a: any) => a.tipo === 'atividade' || !a.tipo)} 
+            onUpdate={refetch} 
+            extensaoId={selectedExtensionId}
+          />
         </TabsContent>
 
         <TabsContent value="alimentacao" className="space-y-4">
-          <OSAlimentacaoSection osId={osId} alimentacoes={os.atividades.filter((a: any) => a.tipo === 'alimentacao')} onUpdate={refetch} />
+          <OSAlimentacaoSection 
+            osId={osId} 
+            alimentacoes={filteredAtividades.filter((a: any) => a.tipo === 'alimentacao')} 
+            onUpdate={refetch}
+            extensaoId={selectedExtensionId}
+          />
         </TabsContent>
 
         <TabsContent value="financeiro" className="space-y-4">

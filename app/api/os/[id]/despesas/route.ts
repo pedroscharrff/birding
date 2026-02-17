@@ -15,6 +15,18 @@ export async function GET(
     const osId = params.id
     const { searchParams } = new URL(request.url)
     const agruparPorFornecedor = searchParams.get('agruparPorFornecedor') === 'true'
+    const extensaoIdParam = searchParams.get('extensaoId')
+
+    // Se extensaoIdParam vier como string, usamos ele.
+    // Se vier como string "null", convertemos para null.
+    // Se não vier, undefined (busca tudo).
+    let extensaoId: string | null | undefined = undefined
+    
+    if (extensaoIdParam === 'null') {
+      extensaoId = null
+    } else if (extensaoIdParam) {
+      extensaoId = extensaoIdParam
+    }
 
     // Verificar se a OS existe e pertence à organização
     const os = await prisma.oS.findFirst({
@@ -32,14 +44,14 @@ export async function GET(
     }
 
     if (agruparPorFornecedor) {
-      const resumo = await resumoPagamentosPorFornecedor(osId)
+      const resumo = await resumoPagamentosPorFornecedor(osId, extensaoId)
       return NextResponse.json({
         success: true,
         data: resumo
       })
     }
 
-    const despesas = await buscarDespesasConsolidadas(osId)
+    const despesas = await buscarDespesasConsolidadas(osId, extensaoId)
 
     // Calcular totais
     const totais = {

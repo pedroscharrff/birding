@@ -41,6 +41,7 @@ export async function GET(request: NextRequest) {
     // Construir filtros
     const where: any = {
       orgId: session.orgId,
+      deletedAt: null,
     }
     
     if (query.titulo) {

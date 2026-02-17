@@ -28,12 +28,29 @@ export async function GET(
       )
     }
 
+    const { searchParams } = new URL(request.url)
+    const extensaoId = searchParams.get('extensaoId')
+
+    const where: any = {
+      osId,
+      categoria: 'guiamento',
+    }
+
+    if (extensaoId) {
+      where.extensaoId = extensaoId
+    } else {
+      // Se não tem extensaoId na query, talvez queira pegar SÓ os do tour (extensaoId: null)
+      // OU todos. O comportamento padrão do frontend parece ser "pegar específicos" quando tem ID.
+      // Se não tem ID (Visão Geral), o frontend filtra depois?
+      // No OSGuiasSection, se extensaoId for null, ele não manda query param.
+      // E queremos ver APENAS os do tour principal nesses casos?
+      // Sim, baseado na lógica de isolamento.
+      where.extensaoId = null
+    }
+
     // Buscar fornecedores de guiamento vinculados
     const fornecedores = await prisma.oSFornecedor.findMany({
-      where: {
-        osId,
-        categoria: 'guiamento',
-      },
+      where,
       include: {
         fornecedor: {
           select: {
@@ -82,7 +99,7 @@ export async function POST(
     const { id: osId } = params
     const body = await request.json()
 
-    const { fornecedorId, contatoNome, contatoEmail, contatoTelefone, contratoRef } = body
+    const { fornecedorId, contatoNome, contatoEmail, contatoTelefone, contratoRef, extensaoId } = body
 
     if (!fornecedorId) {
       return NextResponse.json(
@@ -128,6 +145,7 @@ export async function POST(
         osId,
         fornecedorId,
         categoria: 'guiamento',
+        extensaoId: extensaoId || null,
       },
     })
 
@@ -148,6 +166,7 @@ export async function POST(
         contatoEmail: contatoEmail || null,
         contatoTelefone: contatoTelefone || null,
         contratoRef: contratoRef || null,
+        extensaoId: extensaoId || null,
       },
       include: {
         fornecedor: {

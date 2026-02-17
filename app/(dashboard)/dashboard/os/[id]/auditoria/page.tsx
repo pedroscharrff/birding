@@ -7,6 +7,13 @@ import { AuditoriaTimeline } from '@/components/os/auditoria-timeline'
 import { AuditoriaStats } from '@/components/os/auditoria-stats'
 import { AuditoriaFilters } from '@/components/os/auditoria-filters'
 import { Breadcrumbs } from '@/components/navigation/Breadcrumbs'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+
+interface Extension {
+  id: string
+  nome: string
+  ordem: number
+}
 
 interface AuditoriaLog {
   id: string
@@ -67,6 +74,27 @@ export default function AuditoriaPage() {
   const [totalPages, setTotalPages] = useState(1)
   const [fromCache, setFromCache] = useState(false)
   const [osTitle, setOsTitle] = useState<string>('...')
+  
+  const [extensions, setExtensions] = useState<Extension[]>([])
+  const [selectedExtension, setSelectedExtension] = useState<string>('all')
+
+  // Carregar extensões
+  useEffect(() => {
+    async function fetchExtensions() {
+      try {
+        const res = await fetch(`/api/os/${osId}/extensoes`)
+        if (res.ok) {
+          const data = await res.json()
+          if (data.success) {
+            setExtensions(data.data)
+          }
+        }
+      } catch (error) {
+        console.error('Erro ao buscar extensões:', error)
+      }
+    }
+    fetchExtensions()
+  }, [osId])
 
   // Buscar logs
   useEffect(() => {
@@ -81,6 +109,7 @@ export default function AuditoriaPage() {
           ...(filters.entidade && { entidade: filters.entidade }),
           ...(filters.dataInicio && { dataInicio: filters.dataInicio }),
           ...(filters.dataFim && { dataFim: filters.dataFim }),
+          ...(selectedExtension !== 'all' && { extensaoId: selectedExtension === 'main' ? 'null' : selectedExtension }),
         })
 
         const response = await fetch(`/api/os/${osId}/auditoria?${queryParams}`)
@@ -101,7 +130,7 @@ export default function AuditoriaPage() {
     }
 
     fetchLogs()
-  }, [osId, page, filters])
+  }, [osId, page, filters, selectedExtension])
 
   // Buscar estatísticas
   useEffect(() => {
@@ -166,12 +195,29 @@ export default function AuditoriaPage() {
             Histórico completo de todas as ações realizadas nesta OS
           </p>
         </div>
-        {fromCache && (
-          <div className="flex items-center gap-2 text-sm text-green-600">
-            <div className="w-2 h-2 bg-green-600 rounded-full animate-pulse" />
-            Cache Ativo
-          </div>
-        )}
+        <div className="flex items-center gap-4">
+          <Select value={selectedExtension} onValueChange={setSelectedExtension}>
+            <SelectTrigger className="w-[200px]">
+              <SelectValue placeholder="Filtrar por Extensão" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todas as Extensões</SelectItem>
+              <SelectItem value="main">Viagem Principal</SelectItem>
+              {extensions.map((ext) => (
+                <SelectItem key={ext.id} value={ext.id}>
+                  {ext.nome}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          
+          {fromCache && (
+            <div className="flex items-center gap-2 text-sm text-green-600">
+              <div className="w-2 h-2 bg-green-600 rounded-full animate-pulse" />
+              Cache Ativo
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Estatísticas */}

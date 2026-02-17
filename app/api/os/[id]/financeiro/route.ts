@@ -31,6 +31,16 @@ export async function GET(
     const session = await requireAuth()
     const osId = params.id
 
+    const { searchParams } = new URL(request.url)
+    const extensaoIdParam = searchParams.get('extensaoId')
+    let extensaoId: string | null | undefined = undefined
+    
+    if (extensaoIdParam === 'null') {
+      extensaoId = null
+    } else if (extensaoIdParam) {
+      extensaoId = extensaoIdParam
+    }
+
     // Verificar se a OS existe e pertence à organização
     const os = await prisma.oS.findFirst({
       where: {
@@ -47,8 +57,8 @@ export async function GET(
     }
 
     // Obter resumo financeiro
-    const resumo = await obterResumoFinanceiroOS(osId)
-    const detalhes = await calcularMargemOS(osId)
+    const resumo = await obterResumoFinanceiroOS(osId, extensaoId)
+    const detalhes = await calcularMargemOS(osId, extensaoId)
 
     return NextResponse.json({
       success: true,

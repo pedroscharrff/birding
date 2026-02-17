@@ -37,9 +37,12 @@ interface PagamentoFormProps {
   fornecedores?: Array<{ id: string; nomeFantasia: string }>
   pagamento?: Pagamento | null
   onSuccess?: () => void
+  initialData?: {
+    extensaoId?: string | null
+  }
 }
 
-export function PagamentoForm({ open, onOpenChange, osId, tipo, fornecedores = [], pagamento, onSuccess }: PagamentoFormProps) {
+export function PagamentoForm({ open, onOpenChange, osId, tipo, fornecedores = [], pagamento, onSuccess, initialData }: PagamentoFormProps) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [uploadingFile, setUploadingFile] = useState(false)
@@ -115,6 +118,9 @@ export function PagamentoForm({ open, onOpenChange, osId, tipo, fornecedores = [
       // Adicionar tipo apenas se estiver criando
       if (!isEditing) {
         payload.tipo = tipo
+        if (initialData?.extensaoId) {
+          payload.extensaoId = initialData.extensaoId
+        }
       }
 
       if (formData.dataPagamento) {

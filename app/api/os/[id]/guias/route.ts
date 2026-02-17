@@ -79,7 +79,7 @@ export async function POST(
     const { id: osId } = params
     const body = await request.json()
 
-    const { guiaId, funcao } = body
+    const { guiaId, funcao, extensaoId } = body
 
     if (!guiaId) {
       return NextResponse.json(
@@ -123,9 +123,10 @@ export async function POST(
     // Verificar se guia já está designado
     const existente = await prisma.guiaDesignacao.findUnique({
       where: {
-        osId_guiaId: {
+        osId_guiaId_extensaoId: {
           osId,
           guiaId,
+          extensaoId: extensaoId || null,
         },
       },
     })
@@ -143,6 +144,7 @@ export async function POST(
         osId,
         guiaId,
         funcao: funcao || null,
+        extensaoId: extensaoId || null,
       },
       include: {
         guia: {
