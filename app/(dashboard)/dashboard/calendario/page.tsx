@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useMemo } from 'react'
 import FullCalendar from '@fullcalendar/react'
 import dayGridPlugin from '@fullcalendar/daygrid'
 import timeGridPlugin from '@fullcalendar/timegrid'
@@ -45,6 +45,47 @@ export default function CalendarioPage() {
   const [currentView, setCurrentView] = useState<'dayGridMonth' | 'timeGridWeek' | 'listWeek'>('dayGridMonth')
   const [currentDate, setCurrentDate] = useState(new Date())
   const { data: eventos, loading, error, refetch } = useApi<CalendarEvent[]>('/api/calendario')
+
+  // Filtros de tipo de evento
+  const [filterEventTypes, setFilterEventTypes] = useState({
+    os: true,
+    atividade: true,
+    hospedagem: true,
+    transporte: true,
+  })
+
+  // Filtros de status
+  const [filterStatus, setFilterStatus] = useState({
+    planejamento: true,
+    cotacoes: true,
+    reservas_pendentes: true,
+    reservas_confirmadas: true,
+    em_andamento: true,
+    concluida: true,
+    cancelada: true,
+  })
+
+  // Filtrar eventos baseado nos filtros selecionados
+  const filteredEventos = useMemo(() => {
+    if (!eventos) return []
+    
+    return eventos.filter(evento => {
+      const eventType = evento.extendedProps?.type
+      const eventStatus = evento.extendedProps?.status
+      
+      // Filtrar por tipo de evento
+      if (eventType && !filterEventTypes[eventType as keyof typeof filterEventTypes]) {
+        return false
+      }
+      
+      // Filtrar por status (apenas para eventos do tipo 'os')
+      if (eventType === 'os' && eventStatus && !filterStatus[eventStatus as keyof typeof filterStatus]) {
+        return false
+      }
+      
+      return true
+    })
+  }, [eventos, filterEventTypes, filterStatus])
 
   const handleEventClick = (clickInfo: any) => {
     const { osId } = clickInfo.event.extendedProps
@@ -190,7 +231,7 @@ export default function CalendarioPage() {
               initialView="dayGridMonth"
               locale={ptBrLocale}
               headerToolbar={false}
-              events={eventos || []}
+              events={filteredEventos || []}
               eventClick={handleEventClick}
               dateClick={handleDateClick}
               height="auto"
@@ -216,28 +257,11 @@ export default function CalendarioPage() {
               selectMirror={true}
               weekends={true}
               eventContent={(eventInfo) => {
-                const { type, participantes, destino, hotel, origem } = eventInfo.event.extendedProps
-                
                 return (
-                  <div className="p-1 overflow-hidden">
-                    <div className="font-medium text-xs truncate">
+                  <div className="px-1 py-0.5 overflow-hidden leading-tight">
+                    <div className="font-medium text-xs truncate whitespace-nowrap">
                       {eventInfo.event.title}
                     </div>
-                    {type === 'os' && participantes && (
-                      <div className="text-xs opacity-90 truncate">
-                        {participantes} pax • {destino}
-                      </div>
-                    )}
-                    {type === 'hospedagem' && hotel && (
-                      <div className="text-xs opacity-90 truncate">
-                        {hotel}
-                      </div>
-                    )}
-                    {type === 'transporte' && (origem || destino) && (
-                      <div className="text-xs opacity-90 truncate">
-                        {origem} → {destino}
-                      </div>
-                    )}
                   </div>
                 )
               }}
@@ -246,33 +270,147 @@ export default function CalendarioPage() {
         </CardContent>
       </Card>
 
-      {/* Legenda */}
+      {/* Legenda Interativa com Filtros */}
       <Card>
         <CardHeader>
-          <CardTitle>Legenda</CardTitle>
-          <CardDescription>Tipos de eventos no calendário</CardDescription>
+          <CardTitle>Filtros & Legenda</CardTitle>
+          <CardDescription>Clique nos itens abaixo para mostrar/ocultar no calendário</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-            <div className="flex items-center gap-2">
-              <div className="w-4 h-4 rounded" style={{ backgroundColor: '#3b82f6' }}></div>
-              <span className="text-sm">Tours/OS</span>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Tipos de Evento */}
+            <div>
+              <h3 className="font-semibold text-sm mb-3 text-gray-700">Tipos de Evento</h3>
+              <div className="grid grid-cols-1 gap-2">
+                <button
+                  onClick={() => setFilterEventTypes({ ...filterEventTypes, os: !filterEventTypes.os })}
+                  className={`flex items-center gap-2 p-2 rounded-md transition-all hover:bg-gray-100 ${
+                    !filterEventTypes.os ? 'opacity-40 line-through' : ''
+                  }`}
+                >
+                  <div className="w-4 h-4 rounded" style={{ backgroundColor: '#3b82f6' }}></div>
+                  <span className="text-sm">Tours / OS</span>
+                  {filterEventTypes.os && <span className="ml-auto text-xs text-green-600">✓ Visível</span>}
+                  {!filterEventTypes.os && <span className="ml-auto text-xs text-gray-400">✗ Oculto</span>}
+                </button>
+                <button
+                  onClick={() => setFilterEventTypes({ ...filterEventTypes, atividade: !filterEventTypes.atividade })}
+                  className={`flex items-center gap-2 p-2 rounded-md transition-all hover:bg-gray-100 ${
+                    !filterEventTypes.atividade ? 'opacity-40 line-through' : ''
+                  }`}
+                >
+                  <div className="w-4 h-4 rounded" style={{ backgroundColor: '#10b981' }}></div>
+                  <span className="text-sm">🎯 Atividades</span>
+                  {filterEventTypes.atividade && <span className="ml-auto text-xs text-green-600">✓ Visível</span>}
+                  {!filterEventTypes.atividade && <span className="ml-auto text-xs text-gray-400">✗ Oculto</span>}
+                </button>
+                <button
+                  onClick={() => setFilterEventTypes({ ...filterEventTypes, hospedagem: !filterEventTypes.hospedagem })}
+                  className={`flex items-center gap-2 p-2 rounded-md transition-all hover:bg-gray-100 ${
+                    !filterEventTypes.hospedagem ? 'opacity-40 line-through' : ''
+                  }`}
+                >
+                  <div className="w-4 h-4 rounded" style={{ backgroundColor: '#8b5cf6' }}></div>
+                  <span className="text-sm">🏨 Hospedagens</span>
+                  {filterEventTypes.hospedagem && <span className="ml-auto text-xs text-green-600">✓ Visível</span>}
+                  {!filterEventTypes.hospedagem && <span className="ml-auto text-xs text-gray-400">✗ Oculto</span>}
+                </button>
+                <button
+                  onClick={() => setFilterEventTypes({ ...filterEventTypes, transporte: !filterEventTypes.transporte })}
+                  className={`flex items-center gap-2 p-2 rounded-md transition-all hover:bg-gray-100 ${
+                    !filterEventTypes.transporte ? 'opacity-40 line-through' : ''
+                  }`}
+                >
+                  <div className="w-4 h-4 rounded" style={{ backgroundColor: '#f59e0b' }}></div>
+                  <span className="text-sm">🚗 Transportes</span>
+                  {filterEventTypes.transporte && <span className="ml-auto text-xs text-green-600">✓ Visível</span>}
+                  {!filterEventTypes.transporte && <span className="ml-auto text-xs text-gray-400">✗ Oculto</span>}
+                </button>
+              </div>
             </div>
-            <div className="flex items-center gap-2">
-              <div className="w-4 h-4 rounded" style={{ backgroundColor: '#10b981' }}></div>
-              <span className="text-sm">🎯 Atividades</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-4 h-4 rounded" style={{ backgroundColor: '#8b5cf6' }}></div>
-              <span className="text-sm">🏨 Hospedagens</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-4 h-4 rounded" style={{ backgroundColor: '#f59e0b' }}></div>
-              <span className="text-sm">🚗 Transportes</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-4 h-4 rounded" style={{ backgroundColor: '#22c55e' }}></div>
-              <span className="text-sm">Confirmado</span>
+
+            {/* Status dos Tours */}
+            <div>
+              <h3 className="font-semibold text-sm mb-3 text-gray-700">Status dos Tours</h3>
+              <div className="grid grid-cols-1 gap-2">
+                <button
+                  onClick={() => setFilterStatus({ ...filterStatus, planejamento: !filterStatus.planejamento })}
+                  className={`flex items-center gap-2 p-2 rounded-md transition-all hover:bg-gray-100 ${
+                    !filterStatus.planejamento ? 'opacity-40 line-through' : ''
+                  }`}
+                >
+                  <div className="w-4 h-4 rounded" style={{ backgroundColor: '#6b7280' }}></div>
+                  <span className="text-sm">Planejamento</span>
+                  {filterStatus.planejamento && <span className="ml-auto text-xs text-green-600">✓ Visível</span>}
+                  {!filterStatus.planejamento && <span className="ml-auto text-xs text-gray-400">✗ Oculto</span>}
+                </button>
+                <button
+                  onClick={() => setFilterStatus({ ...filterStatus, cotacoes: !filterStatus.cotacoes })}
+                  className={`flex items-center gap-2 p-2 rounded-md transition-all hover:bg-gray-100 ${
+                    !filterStatus.cotacoes ? 'opacity-40 line-through' : ''
+                  }`}
+                >
+                  <div className="w-4 h-4 rounded" style={{ backgroundColor: '#3b82f6' }}></div>
+                  <span className="text-sm">Cotações</span>
+                  {filterStatus.cotacoes && <span className="ml-auto text-xs text-green-600">✓ Visível</span>}
+                  {!filterStatus.cotacoes && <span className="ml-auto text-xs text-gray-400">✗ Oculto</span>}
+                </button>
+                <button
+                  onClick={() => setFilterStatus({ ...filterStatus, reservas_pendentes: !filterStatus.reservas_pendentes })}
+                  className={`flex items-center gap-2 p-2 rounded-md transition-all hover:bg-gray-100 ${
+                    !filterStatus.reservas_pendentes ? 'opacity-40 line-through' : ''
+                  }`}
+                >
+                  <div className="w-4 h-4 rounded" style={{ backgroundColor: '#eab308' }}></div>
+                  <span className="text-sm">Reservas Pendentes</span>
+                  {filterStatus.reservas_pendentes && <span className="ml-auto text-xs text-green-600">✓ Visível</span>}
+                  {!filterStatus.reservas_pendentes && <span className="ml-auto text-xs text-gray-400">✗ Oculto</span>}
+                </button>
+                <button
+                  onClick={() => setFilterStatus({ ...filterStatus, reservas_confirmadas: !filterStatus.reservas_confirmadas })}
+                  className={`flex items-center gap-2 p-2 rounded-md transition-all hover:bg-gray-100 ${
+                    !filterStatus.reservas_confirmadas ? 'opacity-40 line-through' : ''
+                  }`}
+                >
+                  <div className="w-4 h-4 rounded" style={{ backgroundColor: '#22c55e' }}></div>
+                  <span className="text-sm">Reservas Confirmadas</span>
+                  {filterStatus.reservas_confirmadas && <span className="ml-auto text-xs text-green-600">✓ Visível</span>}
+                  {!filterStatus.reservas_confirmadas && <span className="ml-auto text-xs text-gray-400">✗ Oculto</span>}
+                </button>
+                <button
+                  onClick={() => setFilterStatus({ ...filterStatus, em_andamento: !filterStatus.em_andamento })}
+                  className={`flex items-center gap-2 p-2 rounded-md transition-all hover:bg-gray-100 ${
+                    !filterStatus.em_andamento ? 'opacity-40 line-through' : ''
+                  }`}
+                >
+                  <div className="w-4 h-4 rounded" style={{ backgroundColor: '#ec4899' }}></div>
+                  <span className="text-sm">Em Andamento</span>
+                  {filterStatus.em_andamento && <span className="ml-auto text-xs text-green-600">✓ Visível</span>}
+                  {!filterStatus.em_andamento && <span className="ml-auto text-xs text-gray-400">✗ Oculto</span>}
+                </button>
+                <button
+                  onClick={() => setFilterStatus({ ...filterStatus, concluida: !filterStatus.concluida })}
+                  className={`flex items-center gap-2 p-2 rounded-md transition-all hover:bg-gray-100 ${
+                    !filterStatus.concluida ? 'opacity-40 line-through' : ''
+                  }`}
+                >
+                  <div className="w-4 h-4 rounded" style={{ backgroundColor: '#10b981' }}></div>
+                  <span className="text-sm">Concluída</span>
+                  {filterStatus.concluida && <span className="ml-auto text-xs text-green-600">✓ Visível</span>}
+                  {!filterStatus.concluida && <span className="ml-auto text-xs text-gray-400">✗ Oculto</span>}
+                </button>
+                <button
+                  onClick={() => setFilterStatus({ ...filterStatus, cancelada: !filterStatus.cancelada })}
+                  className={`flex items-center gap-2 p-2 rounded-md transition-all hover:bg-gray-100 ${
+                    !filterStatus.cancelada ? 'opacity-40 line-through' : ''
+                  }`}
+                >
+                  <div className="w-4 h-4 rounded" style={{ backgroundColor: '#ef4444' }}></div>
+                  <span className="text-sm">Cancelada</span>
+                  {filterStatus.cancelada && <span className="ml-auto text-xs text-green-600">✓ Visível</span>}
+                  {!filterStatus.cancelada && <span className="ml-auto text-xs text-gray-400">✗ Oculto</span>}
+                </button>
+              </div>
             </div>
           </div>
         </CardContent>
