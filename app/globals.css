@@ -101,16 +101,22 @@
 .calendar-container .fc-event {
   cursor: pointer;
   border-radius: 4px;
-  padding: 2px 4px;
-  margin-bottom: 2px;
+  padding: 1px 4px;
+  margin-bottom: 1px;
   font-size: 0.75rem;
   transition: all 0.2s;
+  line-height: 1.2;
+  height: auto;
+  min-height: 18px;
+  max-height: 20px;
+  overflow: hidden;
 }
 
 .calendar-container .fc-event:hover {
   opacity: 0.9;
   transform: translateY(-1px);
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  z-index: 10;
 }
 
 .calendar-container .fc-daygrid-day.fc-day-today {
