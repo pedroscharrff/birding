@@ -1090,6 +1090,7 @@ model Cotacao {
   organizacao Organizacao   @relation(fields: [orgId], references: [id], onDelete: Cascade)
   responsavel Usuario       @relation(fields: [responsavelId], references: [id])
   itens       CotacaoItem[]
+  invoices    Invoice[]
 
   @@index([orgId])
   @@index([responsavelId])
@@ -1222,6 +1223,7 @@ model Invoice {
   organizacao    Organizacao     @relation(fields: [orgId], references: [id], onDelete: Cascade)
   os             OS?             @relation(fields: [osId], references: [id])
   contaPagamento ContaPagamento? @relation(fields: [contaPagamentoId], references: [id])
+  cotacao        Cotacao?        @relation(fields: [cotacaoId], references: [id])
   criador        Usuario         @relation(fields: [createdBy], references: [id])
 
   @@unique([orgId, numero])

@@ -158,8 +158,6 @@ export default function InvoiceViewPage() {
 
   // Agrupar itens por extensão
   const groupItemsByExtension = () => {
-    if (!invoice?.os) return { tourPrincipal: {}, extensoes: [] }
-
     const groups: any = {
       tourPrincipal: {
         nome: 'Tour Principal',
@@ -171,78 +169,126 @@ export default function InvoiceViewPage() {
       extensoes: [],
     }
 
-    // Itens do tour principal (extensaoId = null)
-    if (invoice.os.hospedagens) {
-      groups.tourPrincipal.hospedagens = invoice.os.hospedagens.filter(
-        (h: any) => !h.extensaoId && invoice.itensIncluidos.hospedagens?.includes(h.id)
+    // Lógica para OS
+    if (invoice?.os) {
+      // Itens do tour principal (extensaoId = null)
+      if (invoice.os.hospedagens) {
+        groups.tourPrincipal.hospedagens = invoice.os.hospedagens.filter(
+          (h: any) => !h.extensaoId && invoice.itensIncluidos.hospedagens?.includes(h.id)
+        )
+      }
+
+      if (invoice.os.atividades) {
+        groups.tourPrincipal.atividades = invoice.os.atividades.filter(
+          (a: any) => !a.extensaoId && invoice.itensIncluidos.atividades?.includes(a.id)
+        )
+      }
+
+      if (invoice.os.transportes) {
+        groups.tourPrincipal.transportes = invoice.os.transportes.filter(
+          (t: any) => !t.extensaoId && invoice.itensIncluidos.transportes?.includes(t.id)
+        )
+      }
+
+      if (invoice.os.passagensAereas) {
+        groups.tourPrincipal.passagens = invoice.os.passagensAereas.filter(
+          (p: any) => !p.extensaoId && invoice.itensIncluidos.passagens?.includes(p.id)
+        )
+      }
+
+      // Itens das extensões
+      if (invoice.os.extensoes) {
+        invoice.os.extensoes.forEach((ext: any) => {
+          const extensaoGroup: any = {
+            id: ext.id,
+            nome: ext.nome,
+            hospedagens: [],
+            atividades: [],
+            transportes: [],
+            passagens: [],
+          }
+
+          if (invoice.os.hospedagens) {
+            extensaoGroup.hospedagens = invoice.os.hospedagens.filter(
+              (h: any) => h.extensaoId === ext.id && invoice.itensIncluidos.hospedagens?.includes(h.id)
+            )
+          }
+
+          if (invoice.os.atividades) {
+            extensaoGroup.atividades = invoice.os.atividades.filter(
+              (a: any) => a.extensaoId === ext.id && invoice.itensIncluidos.atividades?.includes(a.id)
+            )
+          }
+
+          if (invoice.os.transportes) {
+            extensaoGroup.transportes = invoice.os.transportes.filter(
+              (t: any) => t.extensaoId === ext.id && invoice.itensIncluidos.transportes?.includes(t.id)
+            )
+          }
+
+          if (invoice.os.passagensAereas) {
+            extensaoGroup.passagens = invoice.os.passagensAereas.filter(
+              (p: any) => p.extensaoId === ext.id && invoice.itensIncluidos.passagens?.includes(p.id)
+            )
+          }
+
+          // Só adicionar extensão se tiver pelo menos um item
+          const hasItems = 
+            extensaoGroup.hospedagens.length > 0 ||
+            extensaoGroup.atividades.length > 0 ||
+            extensaoGroup.transportes.length > 0 ||
+            extensaoGroup.passagens.length > 0
+
+          if (hasItems) {
+            groups.extensoes.push(extensaoGroup)
+          }
+        })
+      }
+    } 
+    // Lógica para Cotação
+    else if (invoice?.cotacao?.itens) {
+      // Filtrar itens selecionados
+      const itensSelecionados = invoice.cotacao.itens.filter((item: any) => 
+        !invoice.itensIncluidos.itens || // Se não tiver filtro, pega todos (retrocompatibilidade)
+        invoice.itensIncluidos.itens.length === 0 || // Se filtro estiver vazio, pega todos (comportamento do backend)
+        invoice.itensIncluidos.itens.includes(item.id)
       )
-    }
 
-    if (invoice.os.atividades) {
-      groups.tourPrincipal.atividades = invoice.os.atividades.filter(
-        (a: any) => !a.extensaoId && invoice.itensIncluidos.atividades?.includes(a.id)
-      )
-    }
+      // Mapear para o formato esperado pelo renderizador
+      // Hospedagens
+      groups.tourPrincipal.hospedagens = itensSelecionados
+        .filter((i: any) => i.categoria === 'hospedagem')
+        .map((i: any) => ({
+          id: i.id,
+          hotelNome: i.descricao,
+          // Cotação não tem checkin/out explícitos nos itens, mas podemos usar data da cotação ou deixar vazio
+          checkin: invoice.cotacao.dataInicio || new Date().toISOString(), 
+          checkout: invoice.cotacao.dataFim || new Date().toISOString(),
+          custoTotal: i.subtotal
+        }))
 
-    if (invoice.os.transportes) {
-      groups.tourPrincipal.transportes = invoice.os.transportes.filter(
-        (t: any) => !t.extensaoId && invoice.itensIncluidos.transportes?.includes(t.id)
-      )
-    }
+      // Atividades & Alimentação (ambos renderizados como atividades na visualização atual ou podemos separar)
+      groups.tourPrincipal.atividades = itensSelecionados
+        .filter((i: any) => i.categoria === 'atividade' || i.categoria === 'alimentacao')
+        .map((i: any) => ({
+          id: i.id,
+          nome: i.descricao,
+          data: null, // Cotação Item não tem data específica
+          valor: i.subtotal
+        }))
 
-    if (invoice.os.passagensAereas) {
-      groups.tourPrincipal.passagens = invoice.os.passagensAereas.filter(
-        (p: any) => !p.extensaoId && invoice.itensIncluidos.passagens?.includes(p.id)
-      )
-    }
-
-    // Itens das extensões
-    if (invoice.os.extensoes) {
-      invoice.os.extensoes.forEach((ext: any) => {
-        const extensaoGroup: any = {
-          id: ext.id,
-          nome: ext.nome,
-          hospedagens: [],
-          atividades: [],
-          transportes: [],
-          passagens: [],
-        }
-
-        if (invoice.os.hospedagens) {
-          extensaoGroup.hospedagens = invoice.os.hospedagens.filter(
-            (h: any) => h.extensaoId === ext.id && invoice.itensIncluidos.hospedagens?.includes(h.id)
-          )
-        }
-
-        if (invoice.os.atividades) {
-          extensaoGroup.atividades = invoice.os.atividades.filter(
-            (a: any) => a.extensaoId === ext.id && invoice.itensIncluidos.atividades?.includes(a.id)
-          )
-        }
-
-        if (invoice.os.transportes) {
-          extensaoGroup.transportes = invoice.os.transportes.filter(
-            (t: any) => t.extensaoId === ext.id && invoice.itensIncluidos.transportes?.includes(t.id)
-          )
-        }
-
-        if (invoice.os.passagensAereas) {
-          extensaoGroup.passagens = invoice.os.passagensAereas.filter(
-            (p: any) => p.extensaoId === ext.id && invoice.itensIncluidos.passagens?.includes(p.id)
-          )
-        }
-
-        // Só adicionar extensão se tiver pelo menos um item
-        const hasItems = 
-          extensaoGroup.hospedagens.length > 0 ||
-          extensaoGroup.atividades.length > 0 ||
-          extensaoGroup.transportes.length > 0 ||
-          extensaoGroup.passagens.length > 0
-
-        if (hasItems) {
-          groups.extensoes.push(extensaoGroup)
-        }
-      })
+      // Transportes
+      groups.tourPrincipal.transportes = itensSelecionados
+        .filter((i: any) => i.categoria === 'transporte')
+        .map((i: any) => ({
+          id: i.id,
+          tipo: 'Transporte', // Valor fixo já que na cotação é genérico
+          origem: i.descricao, // Usando descrição como origem/destino já que é texto livre
+          destino: '',
+          custo: i.subtotal
+        }))
+        
+      // Passagens (se houver no futuro, por enquanto cotação não separa passagens explicitamente além de 'transporte' ou item genérico, mas se tiver categoria específica mapear aqui)
     }
 
     return groups

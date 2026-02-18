@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import {
@@ -46,32 +46,31 @@ export default function CotacoesPage() {
   const [destinoFilter, setDestinoFilter] = useState<string>("")
   const [refreshKey, setRefreshKey] = useState(0)
 
-  const mockCotacoes = [
-    {
-      id: "1",
-      titulo: "Cotação - Pantanal Sul Julho 2026",
-      clienteNome: "João Silva",
-      destino: "Bonito, MS",
-      dataInicio: "2026-07-15",
-      dataFim: "2026-07-22",
-      statusCotacao: "rascunho",
-      valorTotal: 12500.00,
-      responsavel: "Maria Santos",
-      createdAt: "2026-01-02",
-    },
-    {
-      id: "2",
-      titulo: "Tour Amazônia - Grupo Observadores",
-      clienteNome: "Ana Costa",
-      destino: "Manaus, AM",
-      dataInicio: "2026-08-10",
-      dataFim: "2026-08-17",
-      statusCotacao: "enviada",
-      valorTotal: 18900.00,
-      responsavel: "Pedro Oliveira",
-      createdAt: "2026-01-01",
-    },
-  ]
+  const [cotacoes, setCotacoes] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+
+  const fetchCotacoes = async () => {
+    setLoading(true)
+    try {
+      const params = new URLSearchParams()
+      if (statusFilter !== "todos") params.append("status", statusFilter)
+      if (destinoFilter) params.append("destino", destinoFilter)
+      
+      const response = await fetch(`/api/cotacoes?${params.toString()}`)
+      if (response.ok) {
+        const data = await response.json()
+        setCotacoes(data.cotacoes)
+      }
+    } catch (error) {
+      console.error("Erro ao buscar cotações:", error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    fetchCotacoes()
+  }, [refreshKey, statusFilter, destinoFilter])
 
   const handleRefresh = () => {
     setRefreshKey(prev => prev + 1)
@@ -187,7 +186,7 @@ export default function CotacoesPage() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {mockCotacoes.length === 0 ? (
+            {cotacoes.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={8} className="text-center py-8 text-gray-500">
                   <FileText className="h-12 w-12 mx-auto mb-2 text-gray-300" />
@@ -196,7 +195,7 @@ export default function CotacoesPage() {
                 </TableCell>
               </TableRow>
             ) : (
-              mockCotacoes.map((cotacao) => (
+              cotacoes.map((cotacao: any) => (
                 <TableRow 
                   key={cotacao.id} 
                   className="hover:bg-gray-50 cursor-pointer"
@@ -216,7 +215,7 @@ export default function CotacoesPage() {
                   <TableCell className="font-medium">
                     {formatCurrency(cotacao.valorTotal)}
                   </TableCell>
-                  <TableCell>{cotacao.responsavel}</TableCell>
+                  <TableCell>{cotacao.responsavel?.nome}</TableCell>
                   <TableCell className="text-right">
                     <Button 
                       variant="ghost" 

@@ -30,6 +30,12 @@ export async function GET(request: NextRequest) {
             destino: true,
           },
         },
+        cotacao: {
+          select: {
+            titulo: true,
+            destino: true,
+          },
+        },
       },
       orderBy: {
         createdAt: 'desc',

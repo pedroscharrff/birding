@@ -83,61 +83,55 @@ export default function CotacaoDetalhesPage() {
 
   const statusCotacao = watch("statusCotacao")
 
-  useEffect(() => {
-    const mockCotacao = {
-      id: params.id,
-      titulo: "Cotação - Pantanal Sul Julho 2026",
-      clienteNome: "João Silva",
-      clienteEmail: "joao@email.com",
-      clienteTelefone: "(67) 99999-9999",
-      destino: "Bonito, MS",
-      dataInicio: "2026-07-15",
-      dataFim: "2026-07-22",
-      statusCotacao: "rascunho",
-      observacoesInternas: "Cliente interessado em pacote completo",
-      observacoesCliente: "Inclui todas as refeições e atividades",
-      responsavel: "Maria Santos",
-      createdAt: "2026-01-02",
-      hospedagens: [
-        { id: "h1", descricao: "Hotel Fazenda - Quarto Duplo", quantidade: 6, valorUnitario: 450, moeda: "BRL", subtotal: 2700 },
-        { id: "h2", descricao: "Pousada Ecológica - Suíte", quantidade: 1, valorUnitario: 800, moeda: "BRL", subtotal: 800 },
-      ],
-      atividades: [
-        { id: "a1", descricao: "Safari Fotográfico", quantidade: 4, valorUnitario: 350, moeda: "BRL", subtotal: 1400 },
-        { id: "a2", descricao: "Passeio de Barco", quantidade: 4, valorUnitario: 200, moeda: "BRL", subtotal: 800 },
-      ],
-      transportes: [
-        { id: "t1", descricao: "Transfer Aeroporto-Hotel", quantidade: 2, valorUnitario: 150, moeda: "BRL", subtotal: 300 },
-      ],
-      alimentacoes: [
-        { id: "al1", descricao: "Café da Manhã", quantidade: 7, valorUnitario: 45, moeda: "BRL", subtotal: 315 },
-        { id: "al2", descricao: "Almoço", quantidade: 6, valorUnitario: 80, moeda: "BRL", subtotal: 480 },
-      ],
-    }
+  const fetchCotacao = async () => {
+    setLoading(true)
+    try {
+      const response = await fetch(`/api/cotacoes/${params.id}`)
+      if (!response.ok) {
+        throw new Error('Erro ao carregar cotação')
+      }
+      const data = await response.json()
+      const cotacaoData = data.cotacao
 
-    setCotacao(mockCotacao)
-    setValue("titulo", mockCotacao.titulo)
-    setValue("clienteNome", mockCotacao.clienteNome)
-    setValue("clienteEmail", mockCotacao.clienteEmail)
-    setValue("clienteTelefone", mockCotacao.clienteTelefone)
-    setValue("destino", mockCotacao.destino)
-    setValue("dataInicio", mockCotacao.dataInicio)
-    setValue("dataFim", mockCotacao.dataFim)
-    setValue("statusCotacao", mockCotacao.statusCotacao as any)
-    setValue("observacoesInternas", mockCotacao.observacoesInternas)
-    setValue("observacoesCliente", mockCotacao.observacoesCliente)
-    
-    setHospedagens(mockCotacao.hospedagens)
-    setAtividades(mockCotacao.atividades)
-    setTransportes(mockCotacao.transportes)
-    setAlimentacoes(mockCotacao.alimentacoes)
+      setCotacao(cotacaoData)
+      setValue("titulo", cotacaoData.titulo)
+      setValue("clienteNome", cotacaoData.clienteNome)
+      setValue("clienteEmail", cotacaoData.clienteEmail || "")
+      setValue("clienteTelefone", cotacaoData.clienteTelefone || "")
+      setValue("destino", cotacaoData.destino)
+      setValue("dataInicio", cotacaoData.dataInicio)
+      setValue("dataFim", cotacaoData.dataFim)
+      setValue("statusCotacao", cotacaoData.statusCotacao as any)
+      setValue("observacoesInternas", cotacaoData.observacoesInternas || "")
+      setValue("observacoesCliente", cotacaoData.observacoesCliente || "")
+      
+      setHospedagens(cotacaoData.hospedagens || [])
+      setAtividades(cotacaoData.atividades || [])
+      setTransportes(cotacaoData.transportes || [])
+      setAlimentacoes(cotacaoData.alimentacoes || [])
+    } catch (error: any) {
+      console.error('Erro ao buscar cotação:', error)
+      toast({
+        title: "Erro ao carregar cotação",
+        description: "Não foi possível carregar os dados. Verifique se a cotação existe.",
+        variant: "destructive",
+      })
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    if (params.id) {
+      fetchCotacao()
+    }
   }, [params.id, setValue])
 
   const calcularTotal = () => {
-    const totalHospedagens = hospedagens.reduce((sum, item) => sum + (item.subtotal || 0), 0)
-    const totalAtividades = atividades.reduce((sum, item) => sum + (item.subtotal || 0), 0)
-    const totalTransportes = transportes.reduce((sum, item) => sum + (item.subtotal || 0), 0)
-    const totalAlimentacoes = alimentacoes.reduce((sum, item) => sum + (item.subtotal || 0), 0)
+    const totalHospedagens = hospedagens.reduce((sum, item) => sum + (Number(item.subtotal) || 0), 0)
+    const totalAtividades = atividades.reduce((sum, item) => sum + (Number(item.subtotal) || 0), 0)
+    const totalTransportes = transportes.reduce((sum, item) => sum + (Number(item.subtotal) || 0), 0)
+    const totalAlimentacoes = alimentacoes.reduce((sum, item) => sum + (Number(item.subtotal) || 0), 0)
     
     return {
       hospedagens: totalHospedagens,
@@ -151,23 +145,32 @@ export default function CotacaoDetalhesPage() {
   const onSubmit = async (values: EditCotacaoInput) => {
     setLoading(true)
     try {
-      const totais = calcularTotal()
-      
-      console.log("Atualizando cotação:", {
-        id: params.id,
-        ...values,
-        hospedagens,
-        atividades,
-        transportes,
-        alimentacoes,
-        totais,
+      const response = await fetch(`/api/cotacoes/${params.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          ...values,
+          hospedagens,
+          atividades,
+          transportes,
+          alimentacoes,
+        }),
       })
+
+      if (!response.ok) {
+        throw new Error('Erro ao atualizar cotação')
+      }
 
       toast({
         title: "Sucesso!",
-        description: "Cotação atualizada com sucesso (mock - API ainda não implementada)",
+        description: "Cotação atualizada com sucesso",
         variant: "success",
       })
+      
+      // Recarregar dados para garantir sincronia
+      fetchCotacao()
     } catch (error: any) {
       toast({
         title: "Erro ao atualizar cotação",
@@ -468,7 +471,7 @@ export default function CotacaoDetalhesPage() {
           <h3 className="font-semibold text-gray-900 mb-4">Itens da Cotação</h3>
           
           <Tabs defaultValue="hospedagens" className="w-full">
-            <TabsList className="grid w-full grid-cols-4">
+            <TabsList className="grid w-full grid-cols-5">
               <TabsTrigger value="hospedagens">
                 Hospedagens
                 {hospedagens.length > 0 && (

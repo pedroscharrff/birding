@@ -37,6 +37,11 @@ export async function GET(
           orderBy: {
             createdAt: "asc"
           }
+        },
+        invoices: {
+          orderBy: {
+            createdAt: "desc"
+          }
         }
       }
     })
@@ -123,7 +128,8 @@ export async function GET(
         hospedagens,
         atividades,
         transportes,
-        alimentacoes
+        alimentacoes,
+        invoices: (cotacao as any).invoices || []
       }
     })
   } catch (error: any) {

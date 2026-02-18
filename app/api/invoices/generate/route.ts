@@ -97,6 +97,8 @@ export async function POST(request: NextRequest) {
         )
       }
     } else if (cotacaoId) {
+      console.log('[INVOICE] Buscando cotação:', cotacaoId)
+      
       dadosOrigem = await prisma.cotacao.findFirst({
         where: {
           id: cotacaoId,
@@ -107,20 +109,39 @@ export async function POST(request: NextRequest) {
         },
       })
 
+      console.log('[INVOICE] Cotação encontrada:', {
+        id: dadosOrigem?.id,
+        titulo: dadosOrigem?.titulo,
+        itensCount: dadosOrigem?.itens?.length || 0,
+        itens: dadosOrigem?.itens
+      })
+
       if (!dadosOrigem) {
         return NextResponse.json({ error: 'Cotação não encontrada' }, { status: 404 })
       }
 
+      console.log('[INVOICE] itensIncluidos recebidos:', itensIncluidos)
+
       // Para cotações, calcular baseado nos itens selecionados
-      if (itensIncluidos.itens) {
+      if (itensIncluidos.itens && itensIncluidos.itens.length > 0) {
         const itensSelecionados = dadosOrigem.itens.filter((item: any) =>
           itensIncluidos.itens.includes(item.id)
         )
+        console.log('[INVOICE] Itens selecionados:', itensSelecionados.length)
         valorTotal = itensSelecionados.reduce(
           (sum: number, item: any) => sum + Number(item.subtotal || 0),
           0
         )
+      } else {
+        // Se nenhum item foi selecionado, usar todos os itens
+        console.log('[INVOICE] Usando todos os itens:', dadosOrigem.itens.length)
+        valorTotal = dadosOrigem.itens.reduce(
+          (sum: number, item: any) => sum + Number(item.subtotal || 0),
+          0
+        )
       }
+      
+      console.log('[INVOICE] Valor total calculado:', valorTotal)
     }
 
     // Gerar número sequencial do invoice

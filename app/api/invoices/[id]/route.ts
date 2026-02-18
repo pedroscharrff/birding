@@ -33,6 +33,11 @@ export async function GET(
             },
           },
         },
+        cotacao: {
+          include: {
+            itens: true,
+          },
+        },
         organizacao: {
           select: {
             nome: true,
