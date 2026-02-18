@@ -2,10 +2,17 @@
 -- MIGRAÇÃO SEGURA PARA PRODUÇÃO
 -- Usa IF NOT EXISTS em tudo — pode ser executada múltiplas vezes
 -- sem risco de perda de dados.
+--
+-- ORDEM:
+-- 1. ENUMs
+-- 2. CREATE TABLE IF NOT EXISTS (novas tabelas)
+-- 3. ADD COLUMN IF NOT EXISTS (em tabelas existentes)
+-- 4. Índices
+-- 5. Foreign Keys
 -- =============================================================
 
 -- ========================
--- ENUMs (só cria se não existir)
+-- 1. ENUMs
 -- ========================
 
 DO $$ BEGIN
@@ -52,7 +59,7 @@ DO $$ BEGIN
   CREATE TYPE "StatusInvoice" AS ENUM ('rascunho', 'enviado', 'pago', 'cancelado', 'vencido');
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
--- Adiciona valores novos em ENUMs existentes
+-- Valores novos em ENUMs existentes
 DO $$ BEGIN
   ALTER TYPE "TipoTransporte" ADD VALUE IF NOT EXISTS 'suv';
 EXCEPTION WHEN others THEN NULL; END $$;
@@ -86,10 +93,9 @@ DO $$ BEGIN
 EXCEPTION WHEN others THEN NULL; END $$;
 
 -- ========================
--- NOVAS TABELAS (devem vir antes das FKs e antes de ADD COLUMN que as referenciam)
+-- 2. NOVAS TABELAS
 -- ========================
 
--- os_extensoes (precisa existir antes das FKs de extensao_id)
 CREATE TABLE IF NOT EXISTS "os_extensoes" (
     "id" TEXT NOT NULL,
     "os_id" TEXT NOT NULL,
@@ -111,7 +117,6 @@ CREATE TABLE IF NOT EXISTS "os_extensoes" (
     CONSTRAINT "os_extensoes_pkey" PRIMARY KEY ("id")
 );
 
--- preset_categories
 CREATE TABLE IF NOT EXISTS "preset_categories" (
     "id" TEXT NOT NULL,
     "org_id" TEXT NOT NULL,
@@ -125,7 +130,6 @@ CREATE TABLE IF NOT EXISTS "preset_categories" (
     CONSTRAINT "preset_categories_pkey" PRIMARY KEY ("id")
 );
 
--- preset_items
 CREATE TABLE IF NOT EXISTS "preset_items" (
     "id" TEXT NOT NULL,
     "org_id" TEXT NOT NULL,
@@ -142,7 +146,6 @@ CREATE TABLE IF NOT EXISTS "preset_items" (
     CONSTRAINT "preset_items_pkey" PRIMARY KEY ("id")
 );
 
--- preset_templates
 CREATE TABLE IF NOT EXISTS "preset_templates" (
     "id" TEXT NOT NULL,
     "org_id" TEXT NOT NULL,
@@ -157,7 +160,6 @@ CREATE TABLE IF NOT EXISTS "preset_templates" (
     CONSTRAINT "preset_templates_pkey" PRIMARY KEY ("id")
 );
 
--- preset_template_items
 CREATE TABLE IF NOT EXISTS "preset_template_items" (
     "id" TEXT NOT NULL,
     "template_id" TEXT NOT NULL,
@@ -167,7 +169,6 @@ CREATE TABLE IF NOT EXISTS "preset_template_items" (
     CONSTRAINT "preset_template_items_pkey" PRIMARY KEY ("id")
 );
 
--- auditoria_os
 CREATE TABLE IF NOT EXISTS "auditoria_os" (
     "id" TEXT NOT NULL,
     "org_id" TEXT NOT NULL,
@@ -188,7 +189,6 @@ CREATE TABLE IF NOT EXISTS "auditoria_os" (
     CONSTRAINT "auditoria_os_pkey" PRIMARY KEY ("id")
 );
 
--- organizacao_policies
 CREATE TABLE IF NOT EXISTS "organizacao_policies" (
     "id" TEXT NOT NULL,
     "org_id" TEXT NOT NULL,
@@ -204,7 +204,6 @@ CREATE TABLE IF NOT EXISTS "organizacao_policies" (
     CONSTRAINT "organizacao_policies_pkey" PRIMARY KEY ("id")
 );
 
--- os_policy_snapshots
 CREATE TABLE IF NOT EXISTS "os_policy_snapshots" (
     "id" TEXT NOT NULL,
     "os_id" TEXT NOT NULL,
@@ -215,7 +214,6 @@ CREATE TABLE IF NOT EXISTS "os_policy_snapshots" (
     CONSTRAINT "os_policy_snapshots_pkey" PRIMARY KEY ("id")
 );
 
--- cotacoes
 CREATE TABLE IF NOT EXISTS "cotacoes" (
     "id" TEXT NOT NULL,
     "org_id" TEXT NOT NULL,
@@ -238,7 +236,6 @@ CREATE TABLE IF NOT EXISTS "cotacoes" (
     CONSTRAINT "cotacoes_pkey" PRIMARY KEY ("id")
 );
 
--- cotacao_itens
 CREATE TABLE IF NOT EXISTS "cotacao_itens" (
     "id" TEXT NOT NULL,
     "cotacao_id" TEXT NOT NULL,
@@ -256,7 +253,6 @@ CREATE TABLE IF NOT EXISTS "cotacao_itens" (
     CONSTRAINT "cotacao_itens_pkey" PRIMARY KEY ("id")
 );
 
--- contas_pagamento
 CREATE TABLE IF NOT EXISTS "contas_pagamento" (
     "id" TEXT NOT NULL,
     "org_id" TEXT NOT NULL,
@@ -277,7 +273,6 @@ CREATE TABLE IF NOT EXISTS "contas_pagamento" (
     CONSTRAINT "contas_pagamento_pkey" PRIMARY KEY ("id")
 );
 
--- invoices
 CREATE TABLE IF NOT EXISTS "invoices" (
     "id" TEXT NOT NULL,
     "org_id" TEXT NOT NULL,
@@ -308,22 +303,21 @@ CREATE TABLE IF NOT EXISTS "invoices" (
     CONSTRAINT "invoices_pkey" PRIMARY KEY ("id")
 );
 
--- Tabela many-to-many OSExtensao <-> Participante
 CREATE TABLE IF NOT EXISTS "_OSExtensaoToParticipante" (
     "A" TEXT NOT NULL,
     "B" TEXT NOT NULL
 );
 
 -- ========================
--- COLUNAS NOVAS EM TABELAS EXISTENTES
--- (depois de criar as novas tabelas, antes das FKs)
+-- 3. ADD COLUMN em tabelas existentes
+-- (inclui extensao_id em TODAS as tabelas que já existiam)
 -- ========================
 
--- Tabela: os (soft delete)
+-- os
 ALTER TABLE "os" ADD COLUMN IF NOT EXISTS "deleted_at" TIMESTAMP(3);
 ALTER TABLE "os" ADD COLUMN IF NOT EXISTS "deleted_by" TEXT;
 
--- Tabela: usuarios
+-- usuarios
 ALTER TABLE "usuarios" ADD COLUMN IF NOT EXISTS "permissoes" JSONB;
 ALTER TABLE "usuarios" ADD COLUMN IF NOT EXISTS "departamento" TEXT;
 ALTER TABLE "usuarios" ADD COLUMN IF NOT EXISTS "cargo" TEXT;
@@ -331,22 +325,25 @@ ALTER TABLE "usuarios" ADD COLUMN IF NOT EXISTS "supervisor_id" TEXT;
 ALTER TABLE "usuarios" ADD COLUMN IF NOT EXISTS "avatar" TEXT;
 ALTER TABLE "usuarios" ADD COLUMN IF NOT EXISTS "ultimo_acesso" TIMESTAMP(3);
 
--- Tabela: fornecedores
+-- fornecedores
 ALTER TABLE "fornecedores" ADD COLUMN IF NOT EXISTS "arquivos" JSONB;
 
--- Tabela: fornecedor_tarifas
+-- fornecedor_tarifas
 ALTER TABLE "fornecedor_tarifas" ADD COLUMN IF NOT EXISTS "tipo_quarto" TEXT;
 ALTER TABLE "fornecedor_tarifas" ADD COLUMN IF NOT EXISTS "regime" TEXT;
 ALTER TABLE "fornecedor_tarifas" ADD COLUMN IF NOT EXISTS "quartos" INTEGER;
 
--- Tabela: os_atividades
+-- os_fornecedores (já existia em produção)
+ALTER TABLE "os_fornecedores" ADD COLUMN IF NOT EXISTS "extensao_id" TEXT;
+
+-- os_atividades
 ALTER TABLE "os_atividades" ADD COLUMN IF NOT EXISTS "extensao_id" TEXT;
 ALTER TABLE "os_atividades" ADD COLUMN IF NOT EXISTS "arquivos" JSONB;
 DO $$ BEGIN
   ALTER TABLE "os_atividades" ADD COLUMN "tipo" "TipoAtividade" NOT NULL DEFAULT 'atividade';
 EXCEPTION WHEN duplicate_column THEN NULL; END $$;
 
--- Tabela: os_hospedagens
+-- os_hospedagens
 ALTER TABLE "os_hospedagens" ADD COLUMN IF NOT EXISTS "tarifa_id" TEXT;
 ALTER TABLE "os_hospedagens" ADD COLUMN IF NOT EXISTS "extensao_id" TEXT;
 ALTER TABLE "os_hospedagens" ADD COLUMN IF NOT EXISTS "arquivos" JSONB;
@@ -355,41 +352,44 @@ DO $$ BEGIN
   ALTER TABLE "os_hospedagens" ADD COLUMN "regime" "RegimeHospedagem";
 EXCEPTION WHEN duplicate_column THEN NULL; END $$;
 
--- Tabela: os_transportes
+-- os_transportes
 ALTER TABLE "os_transportes" ADD COLUMN IF NOT EXISTS "extensao_id" TEXT;
 ALTER TABLE "os_transportes" ADD COLUMN IF NOT EXISTS "arquivos" JSONB;
 ALTER TABLE "os_transportes" ADD COLUMN IF NOT EXISTS "detalhes" JSONB;
 
--- Tabela: os_passagens_aereas
+-- os_passagens_aereas
 ALTER TABLE "os_passagens_aereas" ADD COLUMN IF NOT EXISTS "extensao_id" TEXT;
 ALTER TABLE "os_passagens_aereas" ADD COLUMN IF NOT EXISTS "arquivos" JSONB;
 
--- Tabela: os_guias_designacao
+-- os_guias_designacao
 ALTER TABLE "os_guias_designacao" ADD COLUMN IF NOT EXISTS "extensao_id" TEXT;
 
--- Tabela: os_motoristas_designacao
+-- os_motoristas_designacao
 ALTER TABLE "os_motoristas_designacao" ADD COLUMN IF NOT EXISTS "extensao_id" TEXT;
 DO $$ BEGIN
   ALTER TABLE "os_motoristas_designacao" ADD COLUMN "veiculo_tipo" "TipoTransporte";
 EXCEPTION WHEN duplicate_column THEN NULL; END $$;
 
--- Tabela: financeiro_lancamentos
+-- financeiro_lancamentos
 ALTER TABLE "financeiro_lancamentos" ADD COLUMN IF NOT EXISTS "extensao_id" TEXT;
 
--- Tabela: os_pagamentos
+-- os_pagamentos
 ALTER TABLE "os_pagamentos" ADD COLUMN IF NOT EXISTS "extensao_id" TEXT;
 ALTER TABLE "os_pagamentos" ADD COLUMN IF NOT EXISTS "percentual_parcial" DECIMAL(5,2);
 
--- Tabela: os_historico_status
+-- os_historico_status
 ALTER TABLE "os_historico_status" ADD COLUMN IF NOT EXISTS "extensao_id" TEXT;
 
--- Tabela: os_participantes
+-- auditoria_os (já existia em produção, sem extensao_id)
+ALTER TABLE "auditoria_os" ADD COLUMN IF NOT EXISTS "extensao_id" TEXT;
+
+-- os_participantes
 ALTER TABLE "os_participantes" ADD COLUMN IF NOT EXISTS "idade" INTEGER;
 ALTER TABLE "os_participantes" ADD COLUMN IF NOT EXISTS "observacoes" TEXT;
 ALTER TABLE "os_participantes" ADD COLUMN IF NOT EXISTS "documentos" JSONB;
 
 -- ========================
--- ÍNDICES
+-- 4. ÍNDICES
 -- ========================
 
 CREATE INDEX IF NOT EXISTS "os_deleted_at_idx" ON "os"("deleted_at");
@@ -457,15 +457,13 @@ CREATE INDEX IF NOT EXISTS "preset_templates_uso_count_idx" ON "preset_templates
 CREATE INDEX IF NOT EXISTS "preset_template_items_template_id_idx" ON "preset_template_items"("template_id");
 CREATE INDEX IF NOT EXISTS "preset_template_items_item_id_idx" ON "preset_template_items"("item_id");
 
--- Unique indexes
 CREATE UNIQUE INDEX IF NOT EXISTS "invoices_org_id_numero_key" ON "invoices"("org_id", "numero");
 CREATE UNIQUE INDEX IF NOT EXISTS "preset_template_items_template_id_item_id_key" ON "preset_template_items"("template_id", "item_id");
 CREATE UNIQUE INDEX IF NOT EXISTS "_OSExtensaoToParticipante_AB_unique" ON "_OSExtensaoToParticipante"("A", "B");
 CREATE INDEX IF NOT EXISTS "_OSExtensaoToParticipante_B_index" ON "_OSExtensaoToParticipante"("B");
 
 -- ========================
--- FOREIGN KEYS
--- (só depois de todas as colunas e tabelas existirem)
+-- 5. FOREIGN KEYS
 -- ========================
 
 DO $$ BEGIN
