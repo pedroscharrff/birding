@@ -49,25 +49,10 @@ export function OSStatusSelect({
   const [pendingStatus, setPendingStatus] = useState<string | null>(null)
   const [showTransitionModal, setShowTransitionModal] = useState(false)
 
-  console.log('🎨 OSStatusSelect RENDERIZADO [VERSÃO FIXED V2]:', {
-    osId,
-    extensaoId,
-    osTitulo,
-    currentStatus,
-    localStatus,
-    contexto: extensaoId ? `EXTENSÃO (${extensaoId})` : 'TOUR PRINCIPAL'
-  })
-
-  // Sincronizar status local quando currentStatus mudar
+  // Sincronizar status local quando currentStatus mudar externamente
   useEffect(() => {
-    console.log('🔄 OSStatusSelect [V2] - currentStatus mudou:', {
-      extensaoId,
-      oldLocalStatus: localStatus,
-      newCurrentStatus: currentStatus,
-      contexto: extensaoId ? 'EXTENSÃO' : 'TOUR PRINCIPAL'
-    })
     setLocalStatus(currentStatus)
-  }, [currentStatus, extensaoId])
+  }, [currentStatus])
 
   const { update, isUpdating } = useOptimisticUpdate()
 
@@ -90,59 +75,28 @@ export function OSStatusSelect({
   const executeStatusChange = async (targetStatus: string, justificativa?: string, explicitExtensaoId?: string | null) => {
     const oldStatus = localStatus
     
-    // Preferência para o ID passado explicitamente, fallback para o prop/estado
+    // Preferência para o ID passado explicitamente, fallback para o prop
     const targetId = explicitExtensaoId !== undefined ? explicitExtensaoId : extensaoId
     
     const endpoint = targetId 
       ? `/api/os/${osId}/extensoes/${targetId}` 
       : `/api/os/${osId}`
 
-    // ALERT DE DEBUG - REMOVER DEPOIS
-    // alert(`DEBUG:\nTarget ID: ${targetId}\nEndpoint: ${endpoint}\nOrigem: ${explicitExtensaoId !== undefined ? 'EXPLICITO' : 'IMPLICITO'}`)
-
-    console.log('🔍 OSStatusSelect - Alterando status:', {
-      contexto: targetId ? 'EXTENSÃO' : 'TOUR PRINCIPAL',
-      extensaoId: targetId,
-      endpoint,
-      oldStatus,
-      newStatus: targetStatus,
-      justificativa,
-      origem: explicitExtensaoId !== undefined ? 'EXPLICITO' : 'IMPLICITO'
-    })
-
     const payload = {
       status: targetStatus,
       ...(justificativa && { motivo: justificativa }),
     }
 
-    console.log('📤 OSStatusSelect - Enviando para API:', {
-      contexto: targetId ? 'EXTENSÃO' : 'TOUR PRINCIPAL',
-      endpoint,
-      payload,
-      extensaoId: targetId,
-      osId
-    })
-
     await update({
       endpoint,
       optimisticData: targetStatus,
       updateFn: (status) => {
-        console.log('✅ Status atualizado com sucesso:', {
-          contexto: targetId ? 'EXTENSÃO' : 'TOUR PRINCIPAL',
-          extensaoId: targetId,
-          newStatus: status
-        })
         setLocalStatus(status)
         if (onStatusChange) {
           onStatusChange(status)
         }
       },
       rollbackFn: () => {
-        console.log('❌ Rollback de status:', {
-          contexto: targetId ? 'EXTENSÃO' : 'TOUR PRINCIPAL',
-          extensaoId: targetId,
-          backTo: oldStatus
-        })
         setLocalStatus(oldStatus)
         if (onStatusChange) {
           onStatusChange(oldStatus)

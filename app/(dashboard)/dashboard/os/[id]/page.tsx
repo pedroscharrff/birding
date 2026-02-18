@@ -114,30 +114,10 @@ export default function OSDetalhesPage() {
   // O histórico usa extensaoId diretamente (não extensaoId como outros itens)
   const filterHistoricoByExtension = (historico: any[]) => {
     if (!historico) return []
-    
-    console.log('📋 Filtrando histórico:', {
-      total: historico.length,
-      selectedExtensionId,
-      items: historico.map(h => ({
-        id: h.id,
-        extensaoId: h.extensaoId,
-        de: h.de,
-        para: h.para,
-        extensaoNome: h.extensao?.nome
-      }))
-    })
-    
     if (selectedExtensionId) {
-      // Quando uma extensão está selecionada, mostrar APENAS histórico dessa extensão
-      const filtered = historico.filter((item: any) => item.extensaoId === selectedExtensionId)
-      console.log('📋 Histórico filtrado para extensão:', filtered.length)
-      return filtered
+      return historico.filter((item: any) => item.extensaoId === selectedExtensionId)
     }
-    
-    // Quando "Visão Geral" está selecionada, mostrar APENAS histórico do tour principal
-    const filtered = historico.filter((item: any) => !item.extensaoId || item.extensaoId === null)
-    console.log('📋 Histórico filtrado para tour principal:', filtered.length)
-    return filtered
+    return historico.filter((item: any) => !item.extensaoId || item.extensaoId === null)
   }
 
   const filteredParticipantes = selectedExtensionId 
@@ -229,18 +209,6 @@ export default function OSDetalhesPage() {
           </div>
         </div>
         <div className="flex items-center gap-2">
-          {(() => {
-            console.log('🎯 Renderizando OSStatusSelect:', {
-              selectedExtensionId,
-              extensaoNome: selectedExtensionId 
-                ? os.extensoes?.find((e: any) => e.id === selectedExtensionId)?.nome 
-                : 'Tour Principal',
-              status: selectedExtensionId 
-                ? os.extensoes?.find((e: any) => e.id === selectedExtensionId)?.status 
-                : os.status
-            })
-            return null
-          })()}
           <Button
             variant="outline"
             size="sm"
@@ -381,10 +349,7 @@ export default function OSDetalhesPage() {
         <OSExtensionTimeline
             extensoes={os.extensoes || []}
             selectedExtensionId={selectedExtensionId}
-            onSelect={(id) => {
-              console.log('🔄 Selecionando extensão:', id)
-              setSelectedExtensionId(id)
-            }}
+            onSelect={(id) => setSelectedExtensionId(id)}
             onAddExtension={handleOpenAddExtension}
             onEditExtension={handleOpenEditExtension}
         />
