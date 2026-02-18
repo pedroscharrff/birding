@@ -52,117 +52,44 @@ DO $$ BEGIN
   CREATE TYPE "StatusInvoice" AS ENUM ('rascunho', 'enviado', 'pago', 'cancelado', 'vencido');
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
--- Adiciona 'suv' ao enum TipoTransporte se não existir
+-- Adiciona valores novos em ENUMs existentes
 DO $$ BEGIN
   ALTER TYPE "TipoTransporte" ADD VALUE IF NOT EXISTS 'suv';
 EXCEPTION WHEN others THEN NULL; END $$;
 
--- Adiciona valores ao TipoLancamento se não existirem
 DO $$ BEGIN
   ALTER TYPE "TipoLancamento" ADD VALUE IF NOT EXISTS 'receita_os';
 EXCEPTION WHEN others THEN NULL; END $$;
+
 DO $$ BEGIN
   ALTER TYPE "TipoLancamento" ADD VALUE IF NOT EXISTS 'comissao';
 EXCEPTION WHEN others THEN NULL; END $$;
 
--- Adiciona valores ao CategoriaLancamento se não existirem
 DO $$ BEGIN
   ALTER TYPE "CategoriaLancamento" ADD VALUE IF NOT EXISTS 'receita_tour';
 EXCEPTION WHEN others THEN NULL; END $$;
+
 DO $$ BEGIN
   ALTER TYPE "CategoriaLancamento" ADD VALUE IF NOT EXISTS 'comissao_agente';
 EXCEPTION WHEN others THEN NULL; END $$;
+
 DO $$ BEGIN
   ALTER TYPE "CategoriaLancamento" ADD VALUE IF NOT EXISTS 'comissao_guia';
 EXCEPTION WHEN others THEN NULL; END $$;
+
 DO $$ BEGIN
   ALTER TYPE "CategoriaLancamento" ADD VALUE IF NOT EXISTS 'reembolso';
 EXCEPTION WHEN others THEN NULL; END $$;
+
 DO $$ BEGIN
   ALTER TYPE "CategoriaLancamento" ADD VALUE IF NOT EXISTS 'cancelamento';
 EXCEPTION WHEN others THEN NULL; END $$;
 
 -- ========================
--- COLUNAS NOVAS EM TABELAS EXISTENTES
+-- NOVAS TABELAS (devem vir antes das FKs e antes de ADD COLUMN que as referenciam)
 -- ========================
 
--- Tabela: os (soft delete)
-ALTER TABLE "os" ADD COLUMN IF NOT EXISTS "deleted_at" TIMESTAMP(3);
-ALTER TABLE "os" ADD COLUMN IF NOT EXISTS "deleted_by" TEXT;
-
--- Tabela: usuarios (permissões e hierarquia)
-ALTER TABLE "usuarios" ADD COLUMN IF NOT EXISTS "permissoes" JSONB;
-ALTER TABLE "usuarios" ADD COLUMN IF NOT EXISTS "departamento" TEXT;
-ALTER TABLE "usuarios" ADD COLUMN IF NOT EXISTS "cargo" TEXT;
-ALTER TABLE "usuarios" ADD COLUMN IF NOT EXISTS "supervisor_id" TEXT;
-ALTER TABLE "usuarios" ADD COLUMN IF NOT EXISTS "avatar" TEXT;
-ALTER TABLE "usuarios" ADD COLUMN IF NOT EXISTS "ultimo_acesso" TIMESTAMP(3);
-
--- Tabela: fornecedores (arquivos)
-ALTER TABLE "fornecedores" ADD COLUMN IF NOT EXISTS "arquivos" JSONB;
-
--- Tabela: fornecedor_tarifas (campos hotelaria)
-ALTER TABLE "fornecedor_tarifas" ADD COLUMN IF NOT EXISTS "tipo_quarto" TEXT;
-ALTER TABLE "fornecedor_tarifas" ADD COLUMN IF NOT EXISTS "regime" TEXT;
-ALTER TABLE "fornecedor_tarifas" ADD COLUMN IF NOT EXISTS "quartos" INTEGER;
-
--- Tabela: os_atividades (tipo e extensao)
-ALTER TABLE "os_atividades" ADD COLUMN IF NOT EXISTS "extensao_id" TEXT;
-ALTER TABLE "os_atividades" ADD COLUMN IF NOT EXISTS "arquivos" JSONB;
-DO $$ BEGIN
-  ALTER TABLE "os_atividades" ADD COLUMN "tipo" "TipoAtividade" NOT NULL DEFAULT 'atividade';
-EXCEPTION WHEN duplicate_column THEN NULL; END $$;
-
--- Tabela: os_hospedagens (campos novos)
-ALTER TABLE "os_hospedagens" ADD COLUMN IF NOT EXISTS "tarifa_id" TEXT;
-ALTER TABLE "os_hospedagens" ADD COLUMN IF NOT EXISTS "extensao_id" TEXT;
-ALTER TABLE "os_hospedagens" ADD COLUMN IF NOT EXISTS "arquivos" JSONB;
-ALTER TABLE "os_hospedagens" ADD COLUMN IF NOT EXISTS "reservas_refs" JSONB;
-DO $$ BEGIN
-  ALTER TABLE "os_hospedagens" ADD COLUMN "regime" "RegimeHospedagem";
-EXCEPTION WHEN duplicate_column THEN NULL; END $$;
-
--- Tabela: os_transportes (extensao e arquivos)
-ALTER TABLE "os_transportes" ADD COLUMN IF NOT EXISTS "extensao_id" TEXT;
-ALTER TABLE "os_transportes" ADD COLUMN IF NOT EXISTS "arquivos" JSONB;
-ALTER TABLE "os_transportes" ADD COLUMN IF NOT EXISTS "detalhes" JSONB;
-
--- Tabela: os_passagens_aereas (extensao e arquivos)
-ALTER TABLE "os_passagens_aereas" ADD COLUMN IF NOT EXISTS "extensao_id" TEXT;
-ALTER TABLE "os_passagens_aereas" ADD COLUMN IF NOT EXISTS "arquivos" JSONB;
-
--- Tabela: os_guias_designacao (extensao)
-ALTER TABLE "os_guias_designacao" ADD COLUMN IF NOT EXISTS "extensao_id" TEXT;
-
--- Tabela: os_motoristas_designacao (extensao e veiculo_tipo)
-ALTER TABLE "os_motoristas_designacao" ADD COLUMN IF NOT EXISTS "extensao_id" TEXT;
-DO $$ BEGIN
-  ALTER TABLE "os_motoristas_designacao" ADD COLUMN "veiculo_tipo" "TipoTransporte";
-EXCEPTION WHEN duplicate_column THEN NULL; END $$;
-
--- Tabela: financeiro_lancamentos (extensao)
-ALTER TABLE "financeiro_lancamentos" ADD COLUMN IF NOT EXISTS "extensao_id" TEXT;
-
--- Tabela: os_pagamentos (extensao e percentual_parcial)
-ALTER TABLE "os_pagamentos" ADD COLUMN IF NOT EXISTS "extensao_id" TEXT;
-ALTER TABLE "os_pagamentos" ADD COLUMN IF NOT EXISTS "percentual_parcial" DECIMAL(5,2);
-
--- Tabela: os_historico_status (extensao)
-ALTER TABLE "os_historico_status" ADD COLUMN IF NOT EXISTS "extensao_id" TEXT;
-
--- Tabela: auditoria_os (extensao)
-ALTER TABLE "auditoria_os" ADD COLUMN IF NOT EXISTS "extensao_id" TEXT;
-
--- Tabela: os_participantes (campos novos)
-ALTER TABLE "os_participantes" ADD COLUMN IF NOT EXISTS "idade" INTEGER;
-ALTER TABLE "os_participantes" ADD COLUMN IF NOT EXISTS "observacoes" TEXT;
-ALTER TABLE "os_participantes" ADD COLUMN IF NOT EXISTS "documentos" JSONB;
-
--- ========================
--- NOVAS TABELAS
--- ========================
-
--- os_extensoes
+-- os_extensoes (precisa existir antes das FKs de extensao_id)
 CREATE TABLE IF NOT EXISTS "os_extensoes" (
     "id" TEXT NOT NULL,
     "os_id" TEXT NOT NULL,
@@ -256,8 +183,8 @@ CREATE TABLE IF NOT EXISTS "auditoria_os" (
     "campos" TEXT[],
     "descricao" TEXT,
     "metadata" JSONB,
-    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "extensao_id" TEXT,
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT "auditoria_os_pkey" PRIMARY KEY ("id")
 );
 
@@ -381,14 +308,88 @@ CREATE TABLE IF NOT EXISTS "invoices" (
     CONSTRAINT "invoices_pkey" PRIMARY KEY ("id")
 );
 
--- Tabela de relação many-to-many OSExtensao <-> Participante
+-- Tabela many-to-many OSExtensao <-> Participante
 CREATE TABLE IF NOT EXISTS "_OSExtensaoToParticipante" (
     "A" TEXT NOT NULL,
     "B" TEXT NOT NULL
 );
 
 -- ========================
--- ÍNDICES (IF NOT EXISTS)
+-- COLUNAS NOVAS EM TABELAS EXISTENTES
+-- (depois de criar as novas tabelas, antes das FKs)
+-- ========================
+
+-- Tabela: os (soft delete)
+ALTER TABLE "os" ADD COLUMN IF NOT EXISTS "deleted_at" TIMESTAMP(3);
+ALTER TABLE "os" ADD COLUMN IF NOT EXISTS "deleted_by" TEXT;
+
+-- Tabela: usuarios
+ALTER TABLE "usuarios" ADD COLUMN IF NOT EXISTS "permissoes" JSONB;
+ALTER TABLE "usuarios" ADD COLUMN IF NOT EXISTS "departamento" TEXT;
+ALTER TABLE "usuarios" ADD COLUMN IF NOT EXISTS "cargo" TEXT;
+ALTER TABLE "usuarios" ADD COLUMN IF NOT EXISTS "supervisor_id" TEXT;
+ALTER TABLE "usuarios" ADD COLUMN IF NOT EXISTS "avatar" TEXT;
+ALTER TABLE "usuarios" ADD COLUMN IF NOT EXISTS "ultimo_acesso" TIMESTAMP(3);
+
+-- Tabela: fornecedores
+ALTER TABLE "fornecedores" ADD COLUMN IF NOT EXISTS "arquivos" JSONB;
+
+-- Tabela: fornecedor_tarifas
+ALTER TABLE "fornecedor_tarifas" ADD COLUMN IF NOT EXISTS "tipo_quarto" TEXT;
+ALTER TABLE "fornecedor_tarifas" ADD COLUMN IF NOT EXISTS "regime" TEXT;
+ALTER TABLE "fornecedor_tarifas" ADD COLUMN IF NOT EXISTS "quartos" INTEGER;
+
+-- Tabela: os_atividades
+ALTER TABLE "os_atividades" ADD COLUMN IF NOT EXISTS "extensao_id" TEXT;
+ALTER TABLE "os_atividades" ADD COLUMN IF NOT EXISTS "arquivos" JSONB;
+DO $$ BEGIN
+  ALTER TABLE "os_atividades" ADD COLUMN "tipo" "TipoAtividade" NOT NULL DEFAULT 'atividade';
+EXCEPTION WHEN duplicate_column THEN NULL; END $$;
+
+-- Tabela: os_hospedagens
+ALTER TABLE "os_hospedagens" ADD COLUMN IF NOT EXISTS "tarifa_id" TEXT;
+ALTER TABLE "os_hospedagens" ADD COLUMN IF NOT EXISTS "extensao_id" TEXT;
+ALTER TABLE "os_hospedagens" ADD COLUMN IF NOT EXISTS "arquivos" JSONB;
+ALTER TABLE "os_hospedagens" ADD COLUMN IF NOT EXISTS "reservas_refs" JSONB;
+DO $$ BEGIN
+  ALTER TABLE "os_hospedagens" ADD COLUMN "regime" "RegimeHospedagem";
+EXCEPTION WHEN duplicate_column THEN NULL; END $$;
+
+-- Tabela: os_transportes
+ALTER TABLE "os_transportes" ADD COLUMN IF NOT EXISTS "extensao_id" TEXT;
+ALTER TABLE "os_transportes" ADD COLUMN IF NOT EXISTS "arquivos" JSONB;
+ALTER TABLE "os_transportes" ADD COLUMN IF NOT EXISTS "detalhes" JSONB;
+
+-- Tabela: os_passagens_aereas
+ALTER TABLE "os_passagens_aereas" ADD COLUMN IF NOT EXISTS "extensao_id" TEXT;
+ALTER TABLE "os_passagens_aereas" ADD COLUMN IF NOT EXISTS "arquivos" JSONB;
+
+-- Tabela: os_guias_designacao
+ALTER TABLE "os_guias_designacao" ADD COLUMN IF NOT EXISTS "extensao_id" TEXT;
+
+-- Tabela: os_motoristas_designacao
+ALTER TABLE "os_motoristas_designacao" ADD COLUMN IF NOT EXISTS "extensao_id" TEXT;
+DO $$ BEGIN
+  ALTER TABLE "os_motoristas_designacao" ADD COLUMN "veiculo_tipo" "TipoTransporte";
+EXCEPTION WHEN duplicate_column THEN NULL; END $$;
+
+-- Tabela: financeiro_lancamentos
+ALTER TABLE "financeiro_lancamentos" ADD COLUMN IF NOT EXISTS "extensao_id" TEXT;
+
+-- Tabela: os_pagamentos
+ALTER TABLE "os_pagamentos" ADD COLUMN IF NOT EXISTS "extensao_id" TEXT;
+ALTER TABLE "os_pagamentos" ADD COLUMN IF NOT EXISTS "percentual_parcial" DECIMAL(5,2);
+
+-- Tabela: os_historico_status
+ALTER TABLE "os_historico_status" ADD COLUMN IF NOT EXISTS "extensao_id" TEXT;
+
+-- Tabela: os_participantes
+ALTER TABLE "os_participantes" ADD COLUMN IF NOT EXISTS "idade" INTEGER;
+ALTER TABLE "os_participantes" ADD COLUMN IF NOT EXISTS "observacoes" TEXT;
+ALTER TABLE "os_participantes" ADD COLUMN IF NOT EXISTS "documentos" JSONB;
+
+-- ========================
+-- ÍNDICES
 -- ========================
 
 CREATE INDEX IF NOT EXISTS "os_deleted_at_idx" ON "os"("deleted_at");
@@ -403,9 +404,9 @@ CREATE INDEX IF NOT EXISTS "os_atividades_os_id_tipo_idx" ON "os_atividades"("os
 CREATE INDEX IF NOT EXISTS "os_hospedagens_tarifa_id_idx" ON "os_hospedagens"("tarifa_id");
 CREATE INDEX IF NOT EXISTS "os_hospedagens_status_pagamento_checkout_idx" ON "os_hospedagens"("status_pagamento", "checkout");
 CREATE INDEX IF NOT EXISTS "os_transportes_status_pagamento_data_partida_idx" ON "os_transportes"("status_pagamento", "data_partida");
+CREATE INDEX IF NOT EXISTS "os_historico_status_extensao_id_idx" ON "os_historico_status"("extensao_id");
 CREATE INDEX IF NOT EXISTS "financeiro_lancamentos_extensao_id_idx" ON "financeiro_lancamentos"("extensao_id");
 CREATE INDEX IF NOT EXISTS "os_pagamentos_extensao_id_idx" ON "os_pagamentos"("extensao_id");
-CREATE INDEX IF NOT EXISTS "os_historico_status_extensao_id_idx" ON "os_historico_status"("extensao_id");
 CREATE INDEX IF NOT EXISTS "auditoria_os_org_id_idx" ON "auditoria_os"("org_id");
 CREATE INDEX IF NOT EXISTS "auditoria_os_os_id_idx" ON "auditoria_os"("os_id");
 CREATE INDEX IF NOT EXISTS "auditoria_os_extensao_id_idx" ON "auditoria_os"("extensao_id");
@@ -463,7 +464,8 @@ CREATE UNIQUE INDEX IF NOT EXISTS "_OSExtensaoToParticipante_AB_unique" ON "_OSE
 CREATE INDEX IF NOT EXISTS "_OSExtensaoToParticipante_B_index" ON "_OSExtensaoToParticipante"("B");
 
 -- ========================
--- FOREIGN KEYS (só adiciona se não existir)
+-- FOREIGN KEYS
+-- (só depois de todas as colunas e tabelas existirem)
 -- ========================
 
 DO $$ BEGIN
