@@ -3,6 +3,7 @@ import { prisma } from '@/lib/db/prisma'
 import { requireAuth } from '@/lib/auth/session'
 import { updateOSSchema } from '@/lib/validators/os'
 import { invalidateOSStatsCache, refreshMaterializedViews } from '@/lib/services/dashboard-stats'
+import { parseLocalDate } from '@/lib/utils/date'
 
 // GET /api/os/[id] - Obter OS por ID
 // Otimizado com selects específicos para reduzir payload
@@ -364,8 +365,8 @@ export async function PATCH(
       where: { id },
       data: {
         ...validatedData,
-        ...(validatedData.dataInicio && { dataInicio: new Date(validatedData.dataInicio) }),
-        ...(validatedData.dataFim && { dataFim: new Date(validatedData.dataFim) }),
+        ...(validatedData.dataInicio && { dataInicio: typeof validatedData.dataInicio === 'string' ? parseLocalDate(validatedData.dataInicio) : validatedData.dataInicio }),
+        ...(validatedData.dataFim && { dataFim: typeof validatedData.dataFim === 'string' ? parseLocalDate(validatedData.dataFim) : validatedData.dataFim }),
       },
       include: {
         agenteResponsavel: {

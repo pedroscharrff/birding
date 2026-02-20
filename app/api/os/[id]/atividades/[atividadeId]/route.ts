@@ -3,6 +3,7 @@ import { prisma } from '@/lib/db/prisma'
 import { requireAuth } from '@/lib/auth/session'
 import { updateAtividadeSchema } from '@/lib/validators/atividade'
 import { logAuditoria } from '@/lib/services/auditoria'
+import { parseLocalDate } from '@/lib/utils/date'
 
 // PATCH /api/os/[id]/atividades/[atividadeId] - Atualizar atividade
 export async function PATCH(
@@ -53,7 +54,7 @@ export async function PATCH(
       data: {
         ...validatedData,
         ...(validatedData.data && {
-          data: new Date(validatedData.data),
+          data: parseLocalDate(validatedData.data),
         }),
         ...(validatedData.hora && {
           hora: new Date(`1970-01-01T${validatedData.hora}`),

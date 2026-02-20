@@ -4,6 +4,7 @@ import { prisma } from '@/lib/db/prisma'
 import { requireAuth } from '@/lib/auth/session'
 import { createOSSchema, listOSQuerySchema } from '@/lib/validators/os'
 import { logAuditoria } from '@/lib/services/auditoria'
+import { parseLocalDate } from '@/lib/utils/date'
 
 // GET /api/os - Listar OS
 export async function GET(request: NextRequest) {
@@ -68,13 +69,13 @@ export async function GET(request: NextRequest) {
     
     if (query.dataInicio) {
       where.dataInicio = {
-        gte: new Date(query.dataInicio),
+        gte: parseLocalDate(query.dataInicio),
       }
     }
     
     if (query.dataFim) {
       where.dataFim = {
-        lte: new Date(query.dataFim),
+        lte: parseLocalDate(query.dataFim),
       }
     }
     
@@ -162,8 +163,8 @@ export async function POST(request: NextRequest) {
       data: {
         ...validatedData,
         orgId: session.orgId,
-        dataInicio: new Date(validatedData.dataInicio),
-        dataFim: new Date(validatedData.dataFim),
+        dataInicio: typeof validatedData.dataInicio === 'string' ? parseLocalDate(validatedData.dataInicio) : validatedData.dataInicio,
+        dataFim: typeof validatedData.dataFim === 'string' ? parseLocalDate(validatedData.dataFim) : validatedData.dataFim,
       },
       include: {
         agenteResponsavel: {

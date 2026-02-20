@@ -3,6 +3,7 @@ import { prisma } from '@/lib/db/prisma'
 import { requireAuth } from '@/lib/auth/session'
 import { logAuditoria } from '@/lib/services/auditoria'
 import { z } from 'zod'
+import { parseLocalDate } from '@/lib/utils/date'
 
 const tipoTransporteSchema = z.preprocess(
   (value) => (value === '4x4' ? 'quatro_x_quatro' : value),
@@ -98,7 +99,7 @@ export async function PATCH(
     if (validatedData.destino !== undefined) updateData.destino = validatedData.destino
     if (validatedData.dataPartida !== undefined) {
       if (validatedData.dataPartida) {
-        const dt = new Date(validatedData.dataPartida)
+        const dt = parseLocalDate(validatedData.dataPartida)
         if (Number.isNaN(dt.getTime())) {
           return NextResponse.json(
             { success: false, error: 'Dados inválidos', details: [{ path: ['dataPartida'], message: 'Data inválida' }] },
@@ -112,7 +113,7 @@ export async function PATCH(
     }
     if (validatedData.dataChegada !== undefined) {
       if (validatedData.dataChegada) {
-        const dt = new Date(validatedData.dataChegada)
+        const dt = parseLocalDate(validatedData.dataChegada)
         if (Number.isNaN(dt.getTime())) {
           return NextResponse.json(
             { success: false, error: 'Dados inválidos', details: [{ path: ['dataChegada'], message: 'Data inválida' }] },

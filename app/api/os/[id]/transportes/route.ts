@@ -4,6 +4,7 @@ import { prisma } from '@/lib/db/prisma'
 import { requireAuth } from '@/lib/auth/session'
 import { logAuditoria } from '@/lib/services/auditoria'
 import { z } from 'zod'
+import { parseLocalDate } from '@/lib/utils/date'
 
 const tipoTransporteSchema = z.preprocess(
   (value) => (value === '4x4' ? 'quatro_x_quatro' : value),
@@ -53,7 +54,7 @@ export async function POST(
     const validatedData = createTransporteSchema.parse(body)
 
     if (validatedData.dataPartida) {
-      const dt = new Date(validatedData.dataPartida)
+      const dt = parseLocalDate(validatedData.dataPartida)
       if (Number.isNaN(dt.getTime())) {
         return NextResponse.json(
           { success: false, error: 'Dados inválidos', details: [{ path: ['dataPartida'], message: 'Data inválida' }] },
@@ -62,7 +63,7 @@ export async function POST(
       }
     }
     if (validatedData.dataChegada) {
-      const dt = new Date(validatedData.dataChegada)
+      const dt = parseLocalDate(validatedData.dataChegada)
       if (Number.isNaN(dt.getTime())) {
         return NextResponse.json(
           { success: false, error: 'Dados inválidos', details: [{ path: ['dataChegada'], message: 'Data inválida' }] },
@@ -110,8 +111,8 @@ export async function POST(
         fornecedorId: validatedData.fornecedorId || null,
         origem: validatedData.origem || null,
         destino: validatedData.destino || null,
-        dataPartida: validatedData.dataPartida ? new Date(validatedData.dataPartida) : null,
-        dataChegada: validatedData.dataChegada ? new Date(validatedData.dataChegada) : null,
+        dataPartida: validatedData.dataPartida ? parseLocalDate(validatedData.dataPartida) : null,
+        dataChegada: validatedData.dataChegada ? parseLocalDate(validatedData.dataChegada) : null,
         custo: validatedData.custo === undefined ? null : validatedData.custo,
         moeda: validatedData.moeda || 'BRL',
         extensaoId: validatedData.extensaoId || null,

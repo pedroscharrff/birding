@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/db/prisma'
 import { getSession } from '@/lib/auth/session'
 import { z } from 'zod'
+import { parseLocalDate } from '@/lib/utils/date'
 
 const updateExtensionSchema = z.object({
   id: z.string().optional(),
@@ -197,8 +198,8 @@ export async function PUT(
       },
       data: {
         nome: data.nome,
-        dataInicio: new Date(data.dataInicio),
-        dataFim: new Date(data.dataFim),
+        dataInicio: parseLocalDate(data.dataInicio),
+        dataFim: parseLocalDate(data.dataFim),
         descricao: data.descricao,
         status: data.status ? (data.status as any) : undefined,
         // Campos Financeiros

@@ -4,6 +4,7 @@ import { prisma } from '@/lib/db/prisma'
 import { requireAuth } from '@/lib/auth/session'
 import { createHospedagemSchema } from '@/lib/validators/hospedagem'
 import { logAuditoria } from '@/lib/services/auditoria'
+import { parseLocalDate } from '@/lib/utils/date'
 
 // POST /api/os/[id]/hospedagens - Adicionar hospedagem
 export async function POST(
@@ -60,8 +61,8 @@ export async function POST(
       data: {
         osId: validatedData.osId,
         hotelNome: fornecedor.nomeFantasia,
-        checkin: new Date(validatedData.checkin),
-        checkout: new Date(validatedData.checkout),
+        checkin: parseLocalDate(validatedData.checkin),
+        checkout: parseLocalDate(validatedData.checkout),
         moeda: validatedData.moeda,
         fornecedorId: validatedData.fornecedorId,
         ...(validatedData.tarifaId && { tarifaId: validatedData.tarifaId }),

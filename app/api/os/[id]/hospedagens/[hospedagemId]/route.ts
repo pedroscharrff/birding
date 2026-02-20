@@ -3,6 +3,7 @@ import { prisma } from '@/lib/db/prisma'
 import { requireAuth } from '@/lib/auth/session'
 import { updateHospedagemSchema } from '@/lib/validators/hospedagem'
 import { logAuditoria } from '@/lib/services/auditoria'
+import { parseLocalDate } from '@/lib/utils/date'
 
 // PATCH /api/os/[id]/hospedagens/[hospedagemId] - Atualizar hospedagem
 export async function PATCH(
@@ -50,8 +51,8 @@ export async function PATCH(
     // Preparar dados para atualização
     const updateData: any = {}
 
-    if (validatedData.checkin !== undefined) updateData.checkin = new Date(validatedData.checkin)
-    if (validatedData.checkout !== undefined) updateData.checkout = new Date(validatedData.checkout)
+    if (validatedData.checkin !== undefined) updateData.checkin = parseLocalDate(validatedData.checkin)
+    if (validatedData.checkout !== undefined) updateData.checkout = parseLocalDate(validatedData.checkout)
     if (validatedData.quartos !== undefined) updateData.quartos = validatedData.quartos
     if (validatedData.tipoQuarto !== undefined) updateData.tipoQuarto = validatedData.tipoQuarto
     if (validatedData.regime !== undefined) updateData.regime = validatedData.regime

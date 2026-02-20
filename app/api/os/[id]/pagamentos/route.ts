@@ -5,6 +5,7 @@ import { obterPagamentosOS, atualizarValorRecebidoOS } from '@/lib/services/os-f
 import { logAuditoria } from '@/lib/services/auditoria'
 import { z } from 'zod'
 import { Decimal } from '@prisma/client/runtime/library'
+import { parseLocalDate } from '@/lib/utils/date'
 
 const createPagamentoSchema = z.object({
   tipo: z.enum(['entrada', 'saida']),
@@ -141,8 +142,8 @@ export async function POST(
         descricao: validatedData.descricao,
         valor: new Decimal(validatedData.valor),
         moeda: validatedData.moeda,
-        dataVencimento: new Date(validatedData.dataVencimento),
-        dataPagamento: validatedData.dataPagamento ? new Date(validatedData.dataPagamento) : null,
+        dataVencimento: parseLocalDate(validatedData.dataVencimento),
+        dataPagamento: validatedData.dataPagamento ? parseLocalDate(validatedData.dataPagamento) : null,
         status: validatedData.status,
         percentualParcial: validatedData.percentualParcial !== undefined && validatedData.percentualParcial !== null
           ? new Decimal(validatedData.percentualParcial)

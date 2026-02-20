@@ -6,6 +6,7 @@ import { logAuditoria } from '@/lib/services/auditoria'
 import { alertsCache } from '@/lib/cache/alerts-cache'
 import { z } from 'zod'
 import { Decimal } from '@prisma/client/runtime/library'
+import { parseLocalDate } from '@/lib/utils/date'
 
 const updatePagamentoSchema = z.object({
   descricao: z.string().optional(),
@@ -66,11 +67,11 @@ export async function PUT(
       updateData.moeda = validatedData.moeda
     }
     if (validatedData.dataVencimento !== undefined) {
-      updateData.dataVencimento = new Date(validatedData.dataVencimento)
+      updateData.dataVencimento = parseLocalDate(validatedData.dataVencimento)
     }
     if (validatedData.dataPagamento !== undefined) {
       updateData.dataPagamento = validatedData.dataPagamento
-        ? new Date(validatedData.dataPagamento)
+        ? parseLocalDate(validatedData.dataPagamento)
         : null
     }
     if (validatedData.status !== undefined) {
