@@ -5,6 +5,7 @@ import { useForm, Controller } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
 import { format } from "date-fns"
+import { formatDateForInput } from "@/lib/utils/date"
 import {
   Dialog,
   DialogContent,
@@ -77,8 +78,8 @@ export function OSExtensionManager({
       if (editingExtension) {
         reset({
           nome: editingExtension.nome,
-          dataInicio: editingExtension.dataInicio ? format(new Date(editingExtension.dataInicio), 'yyyy-MM-dd') : '',
-          dataFim: editingExtension.dataFim ? format(new Date(editingExtension.dataFim), 'yyyy-MM-dd') : '',
+          dataInicio: editingExtension.dataInicio ? formatDateForInput(editingExtension.dataInicio) : '',
+          dataFim: editingExtension.dataFim ? formatDateForInput(editingExtension.dataFim) : '',
           descricao: editingExtension.descricao || '',
           status: editingExtension.status || 'planejamento',
         })

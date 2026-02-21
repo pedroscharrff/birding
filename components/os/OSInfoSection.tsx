@@ -12,6 +12,7 @@ import { Edit, Save, X, UserCog } from 'lucide-react'
 import { useOptimisticUpdate } from '@/hooks/useOptimisticApi'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
+import { formatDateForInput, parseDateUTC } from '@/lib/utils/date'
 import { TransferResponsavelDialog } from './TransferResponsavelDialog'
 import { DeleteOSDialog } from './DeleteOSDialog'
 
@@ -51,8 +52,8 @@ export function OSInfoSection({ os, onUpdate }: OSInfoSectionProps) {
   const [formData, setFormData] = useState({
     titulo: localOS.titulo,
     destino: localOS.destino,
-    dataInicio: format(new Date(localOS.dataInicio), 'yyyy-MM-dd'),
-    dataFim: format(new Date(localOS.dataFim), 'yyyy-MM-dd'),
+    dataInicio: formatDateForInput(localOS.dataInicio),
+    dataFim: formatDateForInput(localOS.dataFim),
     status: localOS.status,
     descricao: localOS.descricao || '',
   })
@@ -92,8 +93,8 @@ export function OSInfoSection({ os, onUpdate }: OSInfoSectionProps) {
         setFormData({
           titulo: oldData.titulo,
           destino: oldData.destino,
-          dataInicio: format(new Date(oldData.dataInicio), 'yyyy-MM-dd'),
-          dataFim: format(new Date(oldData.dataFim), 'yyyy-MM-dd'),
+          dataInicio: formatDateForInput(oldData.dataInicio),
+          dataFim: formatDateForInput(oldData.dataFim),
           status: oldData.status,
           descricao: oldData.descricao || '',
         })
@@ -114,8 +115,8 @@ export function OSInfoSection({ os, onUpdate }: OSInfoSectionProps) {
     setFormData({
       titulo: localOS.titulo,
       destino: localOS.destino,
-      dataInicio: format(new Date(localOS.dataInicio), 'yyyy-MM-dd'),
-      dataFim: format(new Date(localOS.dataFim), 'yyyy-MM-dd'),
+      dataInicio: formatDateForInput(localOS.dataInicio),
+      dataFim: formatDateForInput(localOS.dataFim),
       status: localOS.status,
       descricao: localOS.descricao || '',
     })
@@ -167,13 +168,13 @@ export function OSInfoSection({ os, onUpdate }: OSInfoSectionProps) {
               <div>
                 <Label className="text-gray-600">Data de Início</Label>
                 <p className="text-lg font-medium mt-1">
-                  {format(new Date(localOS.dataInicio), "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
+                  {format(parseDateUTC(localOS.dataInicio)!, "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
                 </p>
               </div>
               <div>
                 <Label className="text-gray-600">Data de Fim</Label>
                 <p className="text-lg font-medium mt-1">
-                  {format(new Date(localOS.dataFim), "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
+                  {format(parseDateUTC(localOS.dataFim)!, "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
                 </p>
               </div>
             </div>

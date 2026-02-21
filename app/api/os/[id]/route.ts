@@ -360,13 +360,20 @@ export async function PATCH(
       )
     }
     
+    const dateInicio = validatedData.dataInicio
+      ? (typeof validatedData.dataInicio === 'string' ? parseLocalDate(validatedData.dataInicio) : validatedData.dataInicio)
+      : undefined
+    const dateFim = validatedData.dataFim
+      ? (typeof validatedData.dataFim === 'string' ? parseLocalDate(validatedData.dataFim) : validatedData.dataFim)
+      : undefined
+
     // Atualizar OS
     const os = await prisma.oS.update({
       where: { id },
       data: {
         ...validatedData,
-        ...(validatedData.dataInicio && { dataInicio: typeof validatedData.dataInicio === 'string' ? parseLocalDate(validatedData.dataInicio) : validatedData.dataInicio }),
-        ...(validatedData.dataFim && { dataFim: typeof validatedData.dataFim === 'string' ? parseLocalDate(validatedData.dataFim) : validatedData.dataFim }),
+        ...(dateInicio && { dataInicio: dateInicio }),
+        ...(dateFim && { dataFim: dateFim }),
       },
       include: {
         agenteResponsavel: {

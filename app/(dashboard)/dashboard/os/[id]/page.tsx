@@ -11,6 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useApi } from '@/hooks/useApi'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
+import { parseDateUTC } from '@/lib/utils/date'
 import { ArrowLeft, Edit, Trash2, Users, MapPin, Calendar, Building2, Plane, Truck, DollarSign, FileText, Compass, Utensils, Receipt } from 'lucide-react'
 import { OSInfoSection } from '@/components/os/OSInfoSection'
 import { OSParticipantesSection } from '@/components/os/OSParticipantesSection'
@@ -195,8 +196,8 @@ export default function OSDetalhesPage() {
                 <Calendar className="h-4 w-4" />
                 <span>
                   {selectedExtensionId && currentExtension 
-                    ? `${format(new Date(currentExtension.dataInicio), 'dd MMM', { locale: ptBR })} a ${format(new Date(currentExtension.dataFim), 'dd MMM yyyy', { locale: ptBR })}`
-                    : `${format(new Date(os.dataInicio), 'dd MMM', { locale: ptBR })} a ${format(new Date(os.dataFim), 'dd MMM yyyy', { locale: ptBR })}`
+                    ? `${format(parseDateUTC(currentExtension.dataInicio)!, 'dd MMM', { locale: ptBR })} a ${format(parseDateUTC(currentExtension.dataFim)!, 'dd MMM yyyy', { locale: ptBR })}`
+                    : `${format(parseDateUTC(os.dataInicio)!, 'dd MMM', { locale: ptBR })} a ${format(parseDateUTC(os.dataFim)!, 'dd MMM yyyy', { locale: ptBR })}`
                   }
                 </span>
               </div>
@@ -427,11 +428,11 @@ export default function OSDetalhesPage() {
                   </div>
                   <div>
                     <span className="text-sm font-medium text-gray-500">Data Início</span>
-                    <p className="text-lg font-medium">{format(new Date(currentExtension.dataInicio), "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}</p>
+                     <p className="text-lg font-medium">{format(parseDateUTC(currentExtension.dataInicio)!, "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}</p>
                   </div>
                   <div>
                     <span className="text-sm font-medium text-gray-500">Data Fim</span>
-                    <p className="text-lg font-medium">{format(new Date(currentExtension.dataFim), "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}</p>
+                    <p className="text-lg font-medium">{format(parseDateUTC(currentExtension.dataFim)!, "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}</p>
                   </div>
                 </div>
                 {currentExtension.descricao && (
