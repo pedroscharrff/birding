@@ -6,9 +6,9 @@ import { parseLocalDate } from '@/lib/utils/date'
 
 const updateExtensionSchema = z.object({
   id: z.string().optional(),
-  nome: z.string().min(3),
-  dataInicio: z.string(),
-  dataFim: z.string(),
+  nome: z.string().min(3).optional(),
+  dataInicio: z.string().optional(),
+  dataFim: z.string().optional(),
   descricao: z.string().optional(),
   status: z.string().optional(),
   // Campos Financeiros
@@ -197,11 +197,11 @@ export async function PUT(
         id: extensaoId
       },
       data: {
-        nome: data.nome,
-        dataInicio: parseLocalDate(data.dataInicio),
-        dataFim: parseLocalDate(data.dataFim),
-        descricao: data.descricao,
-        status: data.status ? (data.status as any) : undefined,
+        ...(data.nome && { nome: data.nome }),
+        ...(data.dataInicio && { dataInicio: parseLocalDate(data.dataInicio) }),
+        ...(data.dataFim && { dataFim: parseLocalDate(data.dataFim) }),
+        ...(data.descricao !== undefined && { descricao: data.descricao }),
+        ...(data.status && { status: data.status as any }),
         // Campos Financeiros
         ...(data.valorVenda !== undefined && { valorVenda: data.valorVenda }),
         ...(data.moedaVenda && { moedaVenda: data.moedaVenda as any }),

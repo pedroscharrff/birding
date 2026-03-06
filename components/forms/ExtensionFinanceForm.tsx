@@ -53,9 +53,6 @@ export function ExtensionFinanceForm({
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          nome: extension.nome,
-          dataInicio: new Date().toISOString(), // Manter valores existentes
-          dataFim: new Date().toISOString(), // Manter valores existentes
           valorVenda: formData.valorVenda ? parseFloat(formData.valorVenda) : null,
           moedaVenda: formData.moedaVenda,
           valorRecebido: formData.valorRecebido ? parseFloat(formData.valorRecebido) : null,

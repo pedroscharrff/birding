@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Plus, Calendar, MapPin, Globe, Edit2 } from "lucide-react"
 import { format } from "date-fns"
 import { ptBR } from "date-fns/locale"
+import { parseDateUTC } from "@/lib/utils/date"
 import { cn } from "@/lib/utils"
 
 interface OSExtensionTimelineProps {
@@ -121,9 +122,9 @@ export function OSExtensionTimeline({
                     <div className="flex items-center justify-center gap-1.5 text-xs text-gray-500 bg-gray-100/50 py-1 rounded-md">
                       <Calendar className="h-3 w-3 text-gray-400" />
                       <span>
-                        {format(new Date(ext.dataInicio), 'dd/MM', { locale: ptBR })} 
+                        {format(parseDateUTC(ext.dataInicio)!, 'dd/MM', { locale: ptBR })} 
                         <span className="mx-1 text-gray-300">|</span> 
-                        {format(new Date(ext.dataFim), 'dd/MM', { locale: ptBR })}
+                        {format(parseDateUTC(ext.dataFim)!, 'dd/MM', { locale: ptBR })}
                       </span>
                     </div>
 

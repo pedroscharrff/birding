@@ -3,6 +3,7 @@ import { CSS } from '@dnd-kit/utilities'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
+import { parseDateUTC } from '@/lib/utils/date'
 import { Calendar, Users, Activity, Home, Loader2 } from 'lucide-react'
 import { cn } from '@/lib/utils/cn'
 import type { OS } from '@prisma/client'
@@ -79,7 +80,7 @@ export function KanbanCard({ os, isDragging = false, isSyncing = false }: Kanban
           <div className="flex items-center gap-1 text-xs text-gray-600">
             <Calendar className="h-3 w-3" />
             <span>
-              {format(new Date(os.dataInicio), 'dd MMM', { locale: ptBR })} - {format(new Date(os.dataFim), 'dd MMM', { locale: ptBR })}
+              {format(parseDateUTC(os.dataInicio)!, 'dd MMM', { locale: ptBR })} - {format(parseDateUTC(os.dataFim)!, 'dd MMM', { locale: ptBR })}
             </span>
           </div>
 
