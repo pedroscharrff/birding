@@ -214,6 +214,7 @@ export interface PagamentosResumo {
       id: string
       descricao: string
       valor: number
+      moeda: string
       dataVencimento: Date
       dataPagamento?: Date
       status: string
@@ -228,6 +229,7 @@ export interface PagamentosResumo {
       id: string
       descricao: string
       valor: number
+      moeda: string
       dataVencimento: Date
       dataPagamento?: Date
       status: string

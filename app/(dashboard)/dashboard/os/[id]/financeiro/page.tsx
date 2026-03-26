@@ -278,10 +278,11 @@ export default function OSFinanceiroPage() {
     }
   }
 
-  const formatCurrency = (value: number) => {
+  const formatCurrency = (value: number, moeda: string = 'BRL') => {
+    const currencyMap: Record<string, string> = { BRL: 'BRL', USD: 'USD', EUR: 'EUR' }
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
-      currency: 'BRL'
+      currency: currencyMap[moeda] || 'BRL'
     }).format(value)
   }
 
@@ -371,7 +372,7 @@ export default function OSFinanceiroPage() {
             <CardDescription>Valor de Venda</CardDescription>
             <CardTitle className="text-2xl flex items-center gap-2">
               <DollarSign className="h-5 w-5 text-green-600" />
-              {formatCurrency(financeiro.resumo.valorVenda)}
+              {formatCurrency(financeiro.resumo.valorVenda, financeiro.os.moedaVenda)}
             </CardTitle>
           </CardHeader>
         </Card>
@@ -380,12 +381,12 @@ export default function OSFinanceiroPage() {
           <CardHeader className="pb-3">
             <CardDescription>Valor Recebido</CardDescription>
             <CardTitle className="text-2xl text-green-600">
-              {formatCurrency(financeiro.resumo.valorRecebido)}
+              {formatCurrency(financeiro.resumo.valorRecebido, financeiro.os.moedaVenda)}
             </CardTitle>
           </CardHeader>
           <CardContent>
             <p className="text-xs text-gray-500">
-              Saldo: {formatCurrency(financeiro.resumo.saldoReceber)}
+              Saldo: {formatCurrency(financeiro.resumo.saldoReceber, financeiro.os.moedaVenda)}
             </p>
           </CardContent>
         </Card>
@@ -394,12 +395,12 @@ export default function OSFinanceiroPage() {
           <CardHeader className="pb-3">
             <CardDescription>Custo Real</CardDescription>
             <CardTitle className="text-2xl text-red-600">
-              {formatCurrency(financeiro.resumo.custoReal)}
+              {formatCurrency(financeiro.resumo.custoReal, financeiro.os.moedaVenda)}
             </CardTitle>
           </CardHeader>
           <CardContent>
             <p className="text-xs text-gray-500">
-              Estimado: {formatCurrency(financeiro.resumo.custoEstimado)}
+              Estimado: {formatCurrency(financeiro.resumo.custoEstimado, financeiro.os.moedaVenda)}
             </p>
           </CardContent>
         </Card>
@@ -414,7 +415,7 @@ export default function OSFinanceiroPage() {
                 <TrendingDown className="h-5 w-5 text-red-600" />
               )}
               <span className={financeiro.resumo.margem >= 0 ? 'text-green-600' : 'text-red-600'}>
-                {formatCurrency(financeiro.resumo.margem)}
+                {formatCurrency(financeiro.resumo.margem, financeiro.os.moedaVenda)}
               </span>
             </CardTitle>
           </CardHeader>
@@ -558,7 +559,7 @@ export default function OSFinanceiroPage() {
                     </div>
                     <div className="flex items-center gap-3">
                       <div className="text-right">
-                        <p className="font-semibold">{formatCurrency(d.valor)}</p>
+                        <p className="font-semibold">{formatCurrency(d.valor, d.moeda)}</p>
                       </div>
                       {getStatusBadge(d.statusPagamento)}
                       {d.arquivos && Array.isArray(d.arquivos) && d.arquivos.length > 0 && (
@@ -621,7 +622,7 @@ export default function OSFinanceiroPage() {
                               </div>
                               <div className="flex items-center gap-3">
                                 <div className="text-right">
-                                  <p className="font-semibold">{formatCurrency(d.valor)}</p>
+                                  <p className="font-semibold">{formatCurrency(d.valor, d.moeda)}</p>
                                 </div>
                                 {getStatusBadge(d.statusPagamento)}
                                 {d.arquivos && Array.isArray(d.arquivos) && d.arquivos.length > 0 && (
@@ -700,7 +701,7 @@ export default function OSFinanceiroPage() {
                   </div>
                   <div className="flex items-center gap-3">
                     <div className="text-right">
-                      <p className="font-semibold">{formatCurrency(pag.valor)}</p>
+                      <p className="font-semibold">{formatCurrency(pag.valor, pag.moeda)}</p>
                       {pag.formaPagamento && (
                         <p className="text-xs text-gray-500">{pag.formaPagamento}</p>
                       )}
@@ -792,7 +793,7 @@ export default function OSFinanceiroPage() {
                   </div>
                   <div className="flex items-center gap-3">
                     <div className="text-right">
-                      <p className="font-semibold">{formatCurrency(pag.valor)}</p>
+                      <p className="font-semibold">{formatCurrency(pag.valor, pag.moeda)}</p>
                     </div>
                     {getStatusBadge(pag.status)}
                     <div className="flex gap-1">
