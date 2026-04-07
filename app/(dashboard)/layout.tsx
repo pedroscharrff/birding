@@ -4,6 +4,7 @@ import { useAuth } from '@/app/providers/AuthProvider'
 import { Sidebar } from '@/components/navigation/Sidebar'
 import { useApi } from '@/hooks/useApi'
 import type { Alert, AlertsCount } from '@/types/alerts'
+import { ExchangeRateWidget } from '@/components/widgets/ExchangeRateWidget'
 
 export default function DashboardLayout({
   children,
@@ -35,6 +36,7 @@ export default function DashboardLayout({
           </div>
         </div>
       </main>
+      <ExchangeRateWidget />
     </div>
   )
 }

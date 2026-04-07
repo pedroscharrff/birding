@@ -9,49 +9,62 @@ import { Decimal } from '@prisma/client/runtime/library'
 /**
  * Calcula o custo total detalhado de uma OS
  */
+// Converte valor para BRL usando cotacaoAtual quando disponível
+function valorParaBRL(valor: number, moeda: string, cotacaoAtual: number | null | undefined): number {
+  if (moeda !== 'BRL' && cotacaoAtual) {
+    return valor * cotacaoAtual
+  }
+  return valor
+}
+
 export async function calcularCustosOS(osId: string, extensaoId?: string | null): Promise<CustosDetalhados> {
   const where: any = { osId }
-  
+
   if (extensaoId !== undefined) {
     where.extensaoId = extensaoId
   }
 
-  // Custos de hospedagem
-  const hospedagens = await prisma.hospedagem.aggregate({
+  // Custos de hospedagem (convertendo moeda estrangeira)
+  const hospedagensRows = await prisma.hospedagem.findMany({
     where,
-    _sum: { custoTotal: true }
+    select: { custoTotal: true, moeda: true, cotacaoAtual: true }
   })
 
-  // Custos de transporte
-  const transportes = await prisma.transporte.aggregate({
+  // Custos de transporte (convertendo moeda estrangeira)
+  const transportesRows = await prisma.transporte.findMany({
     where,
-    _sum: { custo: true }
+    select: { custo: true, moeda: true, cotacaoAtual: true }
   })
 
-  // Custos de atividades
-  const atividades = await prisma.atividade.aggregate({
+  // Custos de atividades (convertendo moeda estrangeira)
+  const atividadesRows = await prisma.atividade.findMany({
     where,
-    _sum: { valor: true }
+    select: { valor: true, moeda: true, cotacaoAtual: true }
   })
 
-  // Custos de passagens aéreas
-  const passagens = await prisma.passagemAerea.aggregate({
+  // Custos de passagens aéreas (convertendo moeda estrangeira)
+  const passagensRows = await prisma.passagemAerea.findMany({
     where,
-    _sum: { custo: true }
+    select: { custo: true, moeda: true, cotacaoAtual: true }
   })
 
   // Outros custos (lançamentos financeiros de saída)
   const lancamentosWhere = { ...where, tipo: { in: ['saida', 'adiantamento'] } }
-  const lancamentos = await prisma.lancamentoFinanceiro.aggregate({
+  const lancamentosRows = await prisma.lancamentoFinanceiro.findMany({
     where: lancamentosWhere,
-    _sum: { valor: true }
+    select: { valor: true, moeda: true, cotacaoAtual: true }
   })
 
-  const hospedagem = Number(hospedagens._sum.custoTotal || 0)
-  const transporte = Number(transportes._sum.custo || 0)
-  const atividadesTotal = Number(atividades._sum.valor || 0)
-  const passagensAereas = Number(passagens._sum.custo || 0)
-  const outros = Number(lancamentos._sum.valor || 0)
+  const hospedagem = hospedagensRows.reduce((acc, h) =>
+    acc + valorParaBRL(Number(h.custoTotal || 0), h.moeda, h.cotacaoAtual ? Number(h.cotacaoAtual) : null), 0)
+  const transporte = transportesRows.reduce((acc, t) =>
+    acc + valorParaBRL(Number(t.custo || 0), t.moeda, t.cotacaoAtual ? Number(t.cotacaoAtual) : null), 0)
+  const atividadesTotal = atividadesRows.reduce((acc, a) =>
+    acc + valorParaBRL(Number(a.valor || 0), a.moeda, a.cotacaoAtual ? Number(a.cotacaoAtual) : null), 0)
+  const passagensAereas = passagensRows.reduce((acc, p) =>
+    acc + valorParaBRL(Number(p.custo || 0), p.moeda, p.cotacaoAtual ? Number(p.cotacaoAtual) : null), 0)
+  const outros = lancamentosRows.reduce((acc, l) =>
+    acc + valorParaBRL(Number(l.valor || 0), l.moeda, l.cotacaoAtual ? Number(l.cotacaoAtual) : null), 0)
 
   // Calcular custos de guias e motoristas (se tiver lançamentos específicos)
   const guias = 0 // TODO: Implementar quando tiver sistema de custos de guias
@@ -98,9 +111,7 @@ export async function calcularMargemOS(osId: string, extensaoId?: string | null)
     where: { id: osId },
     select: {
       valorVenda: true,
-      valorRecebido: true,
       custoEstimado: true,
-      custoReal: true
     }
   })
 
@@ -108,11 +119,31 @@ export async function calcularMargemOS(osId: string, extensaoId?: string | null)
     throw new Error('OS não encontrada')
   }
 
+  // Calcular custos dinamicamente (já converte moeda estrangeira via cotacaoAtual)
   const custos = await calcularCustosOS(osId)
 
+  // Calcular recebido dinamicamente a partir dos pagamentos de entrada pagos
+  // (garante sempre o valor correto, inclusive com conversão de moeda)
+  const pagamentosEntrada = await prisma.pagamentoOS.findMany({
+    where: { osId, tipo: 'entrada', status: 'pago' },
+    select: { valor: true, moeda: true, cotacaoAtual: true }
+  })
+  const recebido = pagamentosEntrada.reduce((acc, p) => {
+    const valor = Number(p.valor)
+    if (p.moeda !== 'BRL' && p.cotacaoAtual) {
+      return acc + valor * Number(p.cotacaoAtual)
+    }
+    return acc + valor
+  }, 0)
+
+  // Também atualiza o campo armazenado na OS para compatibilidade
+  await prisma.oS.update({
+    where: { id: osId },
+    data: { valorRecebido: new Decimal(recebido) }
+  })
+
   const receita = Number(os.valorVenda || 0)
-  const recebido = Number(os.valorRecebido || 0)
-  const custoRealCalculado = Number(os.custoReal || custos.total)
+  const custoRealCalculado = custos.total
   const custoEstimadoCalculado = Number(os.custoEstimado || custos.total)
 
   const lucroEstimado = receita - custoEstimadoCalculado
@@ -205,16 +236,25 @@ export async function obterPagamentosOS(osId: string, extensaoId?: string | null
   const entradas = pagamentos.filter(p => p.tipo === 'entrada')
   const saidas = pagamentos.filter(p => p.tipo === 'saida')
 
-  const entradasTotal = entradas.reduce((acc, p) => acc + Number(p.valor), 0)
+  // Converte valor para BRL usando cotacaoAtual quando disponível
+  const toBRL = (p: typeof pagamentos[0]) => {
+    const valor = Number(p.valor)
+    if (p.moeda !== 'BRL' && p.cotacaoAtual) {
+      return valor * Number(p.cotacaoAtual)
+    }
+    return valor
+  }
+
+  const entradasTotal = entradas.reduce((acc, p) => acc + toBRL(p), 0)
   const entradasRecebido = entradas
     .filter(p => p.status === 'pago')
-    .reduce((acc, p) => acc + Number(p.valor), 0)
+    .reduce((acc, p) => acc + toBRL(p), 0)
   const entradasPendente = entradasTotal - entradasRecebido
 
-  const saidasTotal = saidas.reduce((acc, p) => acc + Number(p.valor), 0)
+  const saidasTotal = saidas.reduce((acc, p) => acc + toBRL(p), 0)
   const saidasPago = saidas
     .filter(p => p.status === 'pago')
-    .reduce((acc, p) => acc + Number(p.valor), 0)
+    .reduce((acc, p) => acc + toBRL(p), 0)
   const saidasPendente = saidasTotal - saidasPago
 
   return {
@@ -231,7 +271,8 @@ export async function obterPagamentosOS(osId: string, extensaoId?: string | null
         dataPagamento: p.dataPagamento || undefined,
         status: p.status,
         formaPagamento: p.formaPagamento || undefined,
-        comprovanteUrl: p.comprovanteUrl || undefined
+        comprovanteUrl: p.comprovanteUrl || undefined,
+        cotacaoAtual: p.cotacaoAtual ? Number(p.cotacaoAtual) : undefined
       }))
     },
     saidas: {
@@ -247,7 +288,8 @@ export async function obterPagamentosOS(osId: string, extensaoId?: string | null
         dataPagamento: p.dataPagamento || undefined,
         status: p.status,
         fornecedor: p.fornecedor || undefined,
-        comprovanteUrl: p.comprovanteUrl || undefined
+        comprovanteUrl: p.comprovanteUrl || undefined,
+        cotacaoAtual: p.cotacaoAtual ? Number(p.cotacaoAtual) : undefined
       }))
     }
   }
@@ -265,7 +307,14 @@ export async function atualizarValorRecebidoOS(osId: string): Promise<void> {
     }
   })
 
-  const valorRecebido = pagamentos.reduce((acc, p) => acc + Number(p.valor), 0)
+  // Converter valores em moeda estrangeira para BRL usando a cotação registrada
+  const valorRecebido = pagamentos.reduce((acc, p) => {
+    const valor = Number(p.valor)
+    if (p.moeda !== 'BRL' && p.cotacaoAtual) {
+      return acc + valor * Number(p.cotacaoAtual)
+    }
+    return acc + valor
+  }, 0)
 
   await prisma.oS.update({
     where: { id: osId },

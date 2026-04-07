@@ -21,6 +21,7 @@ const updatePagamentoSchema = z.object({
   comprovanteUrl: z.string().optional().nullable(),
   fornecedorId: z.string().optional().nullable(),
   observacoes: z.string().optional().nullable(),
+  cotacaoAtual: z.number().positive().optional().nullable(),
 })
 
 /**
@@ -96,6 +97,11 @@ export async function PUT(
     }
     if (validatedData.observacoes !== undefined) {
       updateData.observacoes = validatedData.observacoes
+    }
+    if (validatedData.cotacaoAtual !== undefined) {
+      updateData.cotacaoAtual = validatedData.cotacaoAtual !== null
+        ? new Decimal(validatedData.cotacaoAtual)
+        : null
     }
 
     // Atualizar pagamento

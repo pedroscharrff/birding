@@ -121,15 +121,25 @@ export async function POST(
     }
 
     // Verificar se guia já está designado
-    const existente = await prisma.guiaDesignacao.findUnique({
-      where: {
-        osId_guiaId_extensaoId: {
-          osId,
-          guiaId,
-          extensaoId: extensaoId || null,
-        },
-      },
-    })
+    // Prisma não aceita null em campos de constraint composta no findUnique,
+    // portanto usamos findFirst quando extensaoId não está presente.
+    const existente = extensaoId
+      ? await prisma.guiaDesignacao.findUnique({
+          where: {
+            osId_guiaId_extensaoId: {
+              osId,
+              guiaId,
+              extensaoId,
+            },
+          },
+        })
+      : await prisma.guiaDesignacao.findFirst({
+          where: {
+            osId,
+            guiaId,
+            extensaoId: null,
+          },
+        })
 
     if (existente) {
       return NextResponse.json(

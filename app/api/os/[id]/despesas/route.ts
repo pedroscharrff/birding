@@ -53,11 +53,19 @@ export async function GET(
 
     const despesas = await buscarDespesasConsolidadas(osId, extensaoId)
 
-    // Calcular totais
+    // Converte valor para BRL usando cotacaoAtual quando disponível
+    const toBRL = (d: { valor: number; moeda: string; cotacaoAtual?: number | null }) => {
+      if (d.moeda !== 'BRL' && d.cotacaoAtual) {
+        return d.valor * d.cotacaoAtual
+      }
+      return d.valor
+    }
+
+    // Calcular totais em BRL
     const totais = {
-      total: despesas.reduce((acc, d) => acc + d.valor, 0),
-      pago: despesas.filter(d => d.statusPagamento === 'pago').reduce((acc, d) => acc + d.valor, 0),
-      pendente: despesas.filter(d => d.statusPagamento !== 'pago').reduce((acc, d) => acc + d.valor, 0),
+      total: despesas.reduce((acc, d) => acc + toBRL(d), 0),
+      pago: despesas.filter(d => d.statusPagamento === 'pago').reduce((acc, d) => acc + toBRL(d), 0),
+      pendente: despesas.filter(d => d.statusPagamento !== 'pago').reduce((acc, d) => acc + toBRL(d), 0),
       porStatus: {
         pendente: despesas.filter(d => d.statusPagamento === 'pendente').length,
         pago: despesas.filter(d => d.statusPagamento === 'pago').length,
