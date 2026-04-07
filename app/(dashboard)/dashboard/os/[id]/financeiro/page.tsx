@@ -85,6 +85,7 @@ interface Pagamento {
     nomeFantasia: string
   } | null
   fornecedorId?: string | null
+  cotacaoAtual?: number | null
 }
 
 interface PagamentosData {
@@ -115,6 +116,7 @@ interface DespesaItem {
   referenciaPagamento: string | null
   dataReferencia: Date | null
   arquivos?: any
+  cotacaoAtual?: number | null
 }
 
 interface DespesasResponse {
@@ -554,12 +556,16 @@ export default function OSFinanceiroPage() {
                           {d.dataPagamento ? `Pago: ${format(new Date(d.dataPagamento), 'dd/MM/yyyy', { locale: ptBR })}` : (d.dataReferencia ? `Ref: ${format(new Date(d.dataReferencia), 'dd/MM/yyyy', { locale: ptBR })}` : '')}
                           {d.formaPagamento ? ` • ${d.formaPagamento}` : ''}
                           {d.referenciaPagamento ? ` • ${d.referenciaPagamento}` : ''}
+                          {d.moeda && d.moeda !== 'BRL' && !d.cotacaoAtual ? ` • Cotação não informada` : ''}
                         </p>
                       </div>
                     </div>
                     <div className="flex items-center gap-3">
                       <div className="text-right">
                         <p className="font-semibold">{formatCurrency(d.valor, d.moeda)}</p>
+                        {d.moeda && d.moeda !== 'BRL' && d.cotacaoAtual && (
+                          <p className="text-xs text-gray-500">≈ {formatCurrency(d.valor * d.cotacaoAtual, 'BRL')}</p>
+                        )}
                       </div>
                       {getStatusBadge(d.statusPagamento)}
                       {d.arquivos && Array.isArray(d.arquivos) && d.arquivos.length > 0 && (
@@ -617,12 +623,16 @@ export default function OSFinanceiroPage() {
                                     {d.dataPagamento ? `Pago: ${format(new Date(d.dataPagamento), 'dd/MM/yyyy', { locale: ptBR })}` : (d.dataReferencia ? `Ref: ${format(new Date(d.dataReferencia), 'dd/MM/yyyy', { locale: ptBR })}` : '')}
                                     {d.formaPagamento ? ` • ${d.formaPagamento}` : ''}
                                     {d.referenciaPagamento ? ` • ${d.referenciaPagamento}` : ''}
+                                    {d.moeda && d.moeda !== 'BRL' && !d.cotacaoAtual ? ` • Cotação não informada` : ''}
                                   </p>
                                 </div>
                               </div>
                               <div className="flex items-center gap-3">
                                 <div className="text-right">
                                   <p className="font-semibold">{formatCurrency(d.valor, d.moeda)}</p>
+                                  {d.moeda && d.moeda !== 'BRL' && d.cotacaoAtual && (
+                                    <p className="text-xs text-gray-500">≈ {formatCurrency(d.valor * d.cotacaoAtual, 'BRL')}</p>
+                                  )}
                                 </div>
                                 {getStatusBadge(d.statusPagamento)}
                                 {d.arquivos && Array.isArray(d.arquivos) && d.arquivos.length > 0 && (
@@ -702,6 +712,9 @@ export default function OSFinanceiroPage() {
                   <div className="flex items-center gap-3">
                     <div className="text-right">
                       <p className="font-semibold">{formatCurrency(pag.valor, pag.moeda)}</p>
+                      {pag.moeda && pag.moeda !== 'BRL' && pag.cotacaoAtual && (
+                        <p className="text-xs text-gray-500">≈ {formatCurrency(pag.valor * pag.cotacaoAtual, 'BRL')}</p>
+                      )}
                       {pag.formaPagamento && (
                         <p className="text-xs text-gray-500">{pag.formaPagamento}</p>
                       )}
@@ -794,6 +807,9 @@ export default function OSFinanceiroPage() {
                   <div className="flex items-center gap-3">
                     <div className="text-right">
                       <p className="font-semibold">{formatCurrency(pag.valor, pag.moeda)}</p>
+                      {pag.moeda && pag.moeda !== 'BRL' && pag.cotacaoAtual && (
+                        <p className="text-xs text-gray-500">≈ {formatCurrency(pag.valor * pag.cotacaoAtual, 'BRL')}</p>
+                      )}
                     </div>
                     {getStatusBadge(pag.status)}
                     <div className="flex gap-1">

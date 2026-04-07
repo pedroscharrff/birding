@@ -24,6 +24,7 @@ const updateDespesaSchema = z.object({
   referenciaPagamento: z.string().optional().nullable(),
   comprovantes: z.array(uploadedFileSchema).optional().nullable(),
   arquivos: z.array(uploadedFileSchema).optional().nullable(),
+  cotacaoAtual: z.number().positive().optional().nullable(),
 })
 
 /**
@@ -112,6 +113,7 @@ export async function PATCH(
         formaPagamento: validatedData.formaPagamento,
         referenciaPagamento: validatedData.referenciaPagamento,
         arquivos,
+        cotacaoAtual: validatedData.cotacaoAtual,
       }
     )
 
@@ -128,6 +130,7 @@ export async function PATCH(
           dataPagamento: dadosAntigos.dataPagamento,
           formaPagamento: dadosAntigos.formaPagamento,
           referenciaPagamento: dadosAntigos.referenciaPagamento,
+          cotacaoAtual: dadosAntigos.cotacaoAtual,
         },
         dadosNovos: validatedData,
         descricao: `Status de pagamento atualizado para: ${validatedData.statusPagamento}`,

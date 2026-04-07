@@ -18,6 +18,7 @@ interface DespesaPagarDialogProps {
     tipo: 'hospedagem' | 'transporte' | 'atividade' | 'passagem_aerea'
     descricao: string
     valor: number
+    moeda?: string
   } | null
   onSuccess?: () => void
 }
@@ -33,6 +34,7 @@ export function DespesaPagarDialog({ open, onOpenChange, osId, despesa, onSucces
     formaPagamento: 'pix',
     referenciaPagamento: '',
     statusPagamento: 'pago',
+    cotacaoAtual: '',
   })
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -49,6 +51,10 @@ export function DespesaPagarDialog({ open, onOpenChange, osId, despesa, onSucces
         formaPagamento: formData.formaPagamento || null,
         referenciaPagamento: formData.referenciaPagamento || null,
         arquivos: comprovantes.length > 0 ? comprovantes : null,
+      }
+
+      if (despesa.moeda && despesa.moeda !== 'BRL' && formData.cotacaoAtual) {
+        payload.cotacaoAtual = parseFloat(formData.cotacaoAtual)
       }
 
       const res = await fetch(`/api/os/${osId}/despesas/${despesa.tipo}/${despesa.id}`, {
@@ -142,6 +148,23 @@ export function DespesaPagarDialog({ open, onOpenChange, osId, despesa, onSucces
                 </SelectContent>
               </Select>
             </div>
+
+            {despesa?.moeda && despesa.moeda !== 'BRL' && (
+              <div>
+                <Label htmlFor="cotacaoAtual">
+                  Cotação Atual ({despesa.moeda} para BRL) <span className="text-red-500">*</span>
+                </Label>
+                <Input
+                  id="cotacaoAtual"
+                  type="number"
+                  step="0.0001"
+                  placeholder="Ex: 5.1234"
+                  value={formData.cotacaoAtual}
+                  onChange={(e) => setFormData({ ...formData, cotacaoAtual: e.target.value })}
+                  required
+                />
+              </div>
+            )}
           </div>
 
           <div className="space-y-2">

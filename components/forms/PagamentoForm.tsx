@@ -23,6 +23,7 @@ interface Pagamento {
   comprovanteUrl?: string | null
   fornecedorId?: string | null
   observacoes?: string | null
+  cotacaoAtual?: number | null
   fornecedor?: {
     id: string
     nomeFantasia: string
@@ -62,6 +63,7 @@ export function PagamentoForm({ open, onOpenChange, osId, tipo, fornecedores = [
     comprovanteUrl: '',
     fornecedorId: '',
     observacoes: '',
+    cotacaoAtual: '',
   })
 
   // Preencher formulário quando estiver editando
@@ -80,6 +82,7 @@ export function PagamentoForm({ open, onOpenChange, osId, tipo, fornecedores = [
         comprovanteUrl: pagamento.comprovanteUrl || '',
         fornecedorId: pagamento.fornecedorId || '',
         observacoes: pagamento.observacoes || '',
+        cotacaoAtual: pagamento.cotacaoAtual?.toString() || '',
       })
       setUploadedFileUrl(pagamento.comprovanteUrl || null)
     } else {
@@ -96,6 +99,7 @@ export function PagamentoForm({ open, onOpenChange, osId, tipo, fornecedores = [
         comprovanteUrl: '',
         fornecedorId: '',
         observacoes: '',
+        cotacaoAtual: '',
       })
       setUploadedFileUrl(null)
     }
@@ -146,6 +150,9 @@ export function PagamentoForm({ open, onOpenChange, osId, tipo, fornecedores = [
       if (formData.observacoes) {
         payload.observacoes = formData.observacoes
       }
+      if (formData.moeda !== 'BRL' && formData.cotacaoAtual) {
+        payload.cotacaoAtual = parseFloat(formData.cotacaoAtual)
+      }
 
       const url = isEditing
         ? `/api/os/${osId}/pagamentos/${pagamento.id}`
@@ -179,6 +186,7 @@ export function PagamentoForm({ open, onOpenChange, osId, tipo, fornecedores = [
           comprovanteUrl: '',
           fornecedorId: '',
           observacoes: '',
+          cotacaoAtual: '',
         })
         setUploadedFileUrl(null)
       }
@@ -302,6 +310,30 @@ export function PagamentoForm({ open, onOpenChange, osId, tipo, fornecedores = [
                 </SelectContent>
               </Select>
             </div>
+
+            {formData.moeda !== 'BRL' && (
+              <div>
+                <Label htmlFor="cotacaoAtual">
+                  Cotação Atual ({formData.moeda} para BRL) <span className="text-red-500">*</span>
+                </Label>
+                <Input
+                  id="cotacaoAtual"
+                  type="number"
+                  step="0.0001"
+                  placeholder="Ex: 5.1234"
+                  value={formData.cotacaoAtual}
+                  onChange={(e) => setFormData({ ...formData, cotacaoAtual: e.target.value })}
+                  required={formData.moeda !== 'BRL'}
+                />
+                {formData.valor && formData.cotacaoAtual && (
+                  <p className="text-xs text-blue-600 mt-1">
+                    ≈ {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(
+                      parseFloat(formData.valor) * parseFloat(formData.cotacaoAtual)
+                    )} em R$
+                  </p>
+                )}
+              </div>
+            )}
 
             <div>
               <Label htmlFor="dataVencimento">

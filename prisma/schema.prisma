@@ -489,6 +489,7 @@ model Atividade {
   formaPagamento      String?         @map("forma_pagamento")
   referenciaPagamento String?         @map("referencia_pagamento")
   extensaoId          String?         @map("extensao_id")
+  cotacaoAtual        Decimal?        @map("cotacao_atual") @db.Decimal(10, 4)
 
   // Arquivos (vouchers, confirmações)
   arquivos Json? // Array de { url, key, fileName, contentType, uploadedAt }
@@ -533,6 +534,7 @@ model Hospedagem {
   formaPagamento      String?         @map("forma_pagamento")
   referenciaPagamento String?         @map("referencia_pagamento")
   extensaoId          String?         @map("extensao_id")
+  cotacaoAtual        Decimal?        @map("cotacao_atual") @db.Decimal(10, 4)
 
   // Arquivos (vouchers, confirmações)
   arquivos Json? // Array de { url, key, fileName, contentType, uploadedAt }
@@ -575,6 +577,7 @@ model Transporte {
   dataPagamento       DateTime?       @map("data_pagamento") @db.Date
   formaPagamento      String?         @map("forma_pagamento")
   referenciaPagamento String?         @map("referencia_pagamento")
+  cotacaoAtual        Decimal?        @map("cotacao_atual") @db.Decimal(10, 4)
 
   // Arquivos (vouchers, confirmações)
   arquivos Json? // Array de { url, key, fileName, contentType, uploadedAt }
@@ -615,6 +618,7 @@ model PassagemAerea {
   dataPagamento       DateTime?       @map("data_pagamento") @db.Date
   formaPagamento      String?         @map("forma_pagamento")
   referenciaPagamento String?         @map("referencia_pagamento")
+  cotacaoAtual        Decimal?        @map("cotacao_atual") @db.Decimal(10, 4)
 
   // Arquivos (bilhetes, vouchers)
   arquivos Json? // Array de { url, key, fileName, contentType, uploadedAt }
@@ -703,6 +707,7 @@ model LancamentoFinanceiro {
   data                DateTime            @db.Date
   observacao          String?
   comprovanteUrl      String?             @map("comprovante_url")
+  cotacaoAtual        Decimal?            @map("cotacao_atual") @db.Decimal(10, 4)
   createdBy           String              @map("created_by")
   createdAt           DateTime            @default(now()) @map("created_at")
   updatedAt           DateTime            @updatedAt @map("updated_at")
@@ -755,6 +760,7 @@ model PagamentoOS {
   formaPagamento String? @map("forma_pagamento") // pix, cartao_credito, boleto, dinheiro, transferencia
   referencia     String? // Número de referência, transação, nota fiscal, etc
   comprovanteUrl String? @map("comprovante_url")
+  cotacaoAtual   Decimal? @map("cotacao_atual") @db.Decimal(10, 4)
 
   // Relacionamento (opcional) com fornecedor para pagamentos de saída
   fornecedorId String? @map("fornecedor_id")

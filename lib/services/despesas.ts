@@ -20,6 +20,7 @@ export interface DespesaConsolidada {
   referenciaPagamento: string | null
   dataReferencia: Date | null // data da atividade/checkin/partida
   arquivos?: any // Array de arquivos anexados
+  cotacaoAtual?: number | null
 }
 
 /**
@@ -66,7 +67,8 @@ export async function buscarDespesasConsolidadas(osId: string, extensaoId?: stri
       formaPagamento: h.formaPagamento,
       referenciaPagamento: h.referenciaPagamento,
       dataReferencia: h.checkin,
-      arquivos: h.arquivos
+      arquivos: h.arquivos,
+      cotacaoAtual: h.cotacaoAtual ? Number(h.cotacaoAtual) : null
     })
   })
 
@@ -84,7 +86,8 @@ export async function buscarDespesasConsolidadas(osId: string, extensaoId?: stri
       formaPagamento: t.formaPagamento,
       referenciaPagamento: t.referenciaPagamento,
       dataReferencia: t.dataPartida,
-      arquivos: t.arquivos
+      arquivos: t.arquivos,
+      cotacaoAtual: t.cotacaoAtual ? Number(t.cotacaoAtual) : null
     })
   })
 
@@ -102,7 +105,8 @@ export async function buscarDespesasConsolidadas(osId: string, extensaoId?: stri
       formaPagamento: a.formaPagamento,
       referenciaPagamento: a.referenciaPagamento,
       dataReferencia: a.data,
-      arquivos: a.arquivos
+      arquivos: a.arquivos,
+      cotacaoAtual: a.cotacaoAtual ? Number(a.cotacaoAtual) : null
     })
   })
 
@@ -120,7 +124,8 @@ export async function buscarDespesasConsolidadas(osId: string, extensaoId?: stri
       formaPagamento: p.formaPagamento,
       referenciaPagamento: p.referenciaPagamento,
       dataReferencia: p.dataPartida,
-      arquivos: p.arquivos
+      arquivos: p.arquivos,
+      cotacaoAtual: p.cotacaoAtual ? Number(p.cotacaoAtual) : null
     })
   })
 
@@ -147,6 +152,7 @@ export async function atualizarStatusPagamentoDespesa(
     referenciaPagamento?: string | null
     comprovantes?: any[] | null
     arquivos?: any[] | null
+    cotacaoAtual?: number | null
   }
 ) {
   const updateData: any = {
@@ -161,6 +167,9 @@ export async function atualizarStatusPagamentoDespesa(
   }
   if (dados.referenciaPagamento !== undefined) {
     updateData.referenciaPagamento = dados.referenciaPagamento
+  }
+  if (dados.cotacaoAtual !== undefined) {
+    updateData.cotacaoAtual = dados.cotacaoAtual
   }
 
   const arquivos = dados.arquivos ?? dados.comprovantes
@@ -206,6 +215,14 @@ export async function resumoPagamentosPorFornecedor(osId: string, extensaoId?: s
     despesas: DespesaConsolidada[]
   }>()
 
+  // Converte valor para BRL usando cotacaoAtual quando disponível
+  const toBRL = (d: DespesaConsolidada) => {
+    if (d.moeda !== 'BRL' && d.cotacaoAtual) {
+      return d.valor * d.cotacaoAtual
+    }
+    return d.valor
+  }
+
   despesas.forEach(d => {
     if (!d.fornecedor) return
 
@@ -221,11 +238,12 @@ export async function resumoPagamentosPorFornecedor(osId: string, extensaoId?: s
     }
 
     const item = resumo.get(key)!
-    item.total += d.valor
+    const valorBRL = toBRL(d)
+    item.total += valorBRL
     if (d.statusPagamento === 'pago') {
-      item.pago += d.valor
+      item.pago += valorBRL
     } else {
-      item.pendente += d.valor
+      item.pendente += valorBRL
     }
     item.despesas.push(d)
   })

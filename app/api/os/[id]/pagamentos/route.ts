@@ -24,6 +24,7 @@ const createPagamentoSchema = z.object({
   fornecedorId: z.string().optional().nullable(),
   observacoes: z.string().optional().nullable(),
   extensaoId: z.string().optional().nullable(),
+  cotacaoAtual: z.number().positive().optional().nullable(),
 })
 
 /**
@@ -154,6 +155,7 @@ export async function POST(
         fornecedorId: validatedData.fornecedorId,
         observacoes: validatedData.observacoes,
         extensaoId: validatedData.extensaoId || null,
+        cotacaoAtual: validatedData.cotacaoAtual || null,
       },
       include: {
         fornecedor: {
