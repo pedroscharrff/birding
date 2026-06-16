@@ -19,7 +19,8 @@ import {
   X,
   ChevronLeft,
   LogOut,
-  Wallet
+  Wallet,
+  Shield
 } from 'lucide-react'
 
 interface SidebarProps {
@@ -79,6 +80,12 @@ const menuItems = [
     href: '/dashboard/usuarios',
     label: 'Usuários',
     icon: Users,
+  },
+  {
+    href: '/dashboard/super-admin',
+    label: 'Super Admin',
+    icon: Shield,
+    adminOnly: true,
   },
 ]
 
@@ -152,6 +159,7 @@ export function Sidebar({ user, logout, alertsCount = 0 }: SidebarProps) {
         <nav className="flex-1 overflow-y-auto py-4 px-2">
           <ul className="space-y-1">
             {menuItems.map((item) => {
+              if (item.adminOnly && user?.roleGlobal !== 'admin') return null
               const Icon = item.icon
               const isActive = pathname === item.href || pathname.startsWith(item.href + '/')
               const showBadge = item.badge && alertsCount > 0

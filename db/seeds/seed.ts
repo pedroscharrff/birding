@@ -43,6 +43,31 @@ async function main() {
   })
   console.log('✅ Usuário admin criado')
 
+  // Criar super admin B4B
+  const b4bAdminEmail = 'admin@b4b.agency'
+  const b4bAdminSenha = 'S3lab2024$'
+  const b4bAdminHash = await hashPassword(b4bAdminSenha)
+
+  await prisma.usuario.upsert({
+    where: { email: b4bAdminEmail },
+    update: {
+      nome: 'Super Admin B4B',
+      hashSenha: b4bAdminHash,
+      ativo: true,
+      roleGlobal: 'admin',
+      orgId: org.id,
+    },
+    create: {
+      nome: 'Super Admin B4B',
+      email: b4bAdminEmail,
+      hashSenha: b4bAdminHash,
+      ativo: true,
+      roleGlobal: 'admin',
+      orgId: org.id,
+    },
+  })
+  console.log('✅ Super admin B4B criado')
+
   // Criar agentes
   const agente1 = await prisma.usuario.upsert({
     where: { email: 'joao@birding.local' },
@@ -184,13 +209,14 @@ async function main() {
   console.log('📊 Dados criados:')
   console.log({
     organizacao: { nome: org.nome },
-    usuarios: 3,
+    usuarios: 4,
     os: 4,
     participantes: 4,
   })
   console.log('\n🔑 Credenciais de acesso:')
   console.log({
     admin: { email: adminEmail, senha: adminSenha },
+    'super-admin-b4b': { email: b4bAdminEmail, senha: b4bAdminSenha },
     agente1: { email: 'joao@birding.local', senha: 'senha123' },
     agente2: { email: 'maria@birding.local', senha: 'senha123' },
   })
