@@ -8,7 +8,8 @@ echo "Iniciando backup: $DATE"
 
 # Backup do banco de dados
 echo "Fazendo backup do banco de dados..."
-pg_dump -U ostour_user ostour | gzip > $BACKUP_DIR/db_$DATE.sql.gz
+source /home/ostour/birding/.env 2>/dev/null
+pg_dump "$DATABASE_URL" | gzip > $BACKUP_DIR/db_$DATE.sql.gz
 
 # Backup dos arquivos MinIO
 echo "Fazendo backup dos arquivos MinIO..."
