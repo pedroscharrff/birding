@@ -9,7 +9,9 @@ echo "Iniciando backup: $DATE"
 # Backup do banco de dados
 echo "Fazendo backup do banco de dados..."
 source /home/ostour/birding/.env 2>/dev/null
-pg_dump "$DATABASE_URL" | gzip > $BACKUP_DIR/db_$DATE.sql.gz
+# pg_dump não aceita query params (?schema=public), então removemos
+DB_URL="${DATABASE_URL%\?*}"
+pg_dump "$DB_URL" | gzip > $BACKUP_DIR/db_$DATE.sql.gz
 
 # Backup dos arquivos MinIO
 echo "Fazendo backup dos arquivos MinIO..."
